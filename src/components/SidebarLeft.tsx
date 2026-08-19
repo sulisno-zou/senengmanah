@@ -20,6 +20,7 @@ import {
   ArrowRightLeft,
   FolderArchive,
   Download,
+  Smartphone,
 } from 'lucide-react';
 import { TabType, UserAccount, ClubSettings } from '../types';
 
@@ -37,6 +38,7 @@ interface SidebarLeftProps {
   onOpenPaymentProof: () => void;
   onOpenRoleSwitch: () => void;
   onOpenDownloadAll?: () => void;
+  onOpenAndroidInstall?: () => void;
   onLogout: () => void;
 }
 
@@ -54,6 +56,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
   onOpenPaymentProof,
   onOpenRoleSwitch,
   onOpenDownloadAll,
+  onOpenAndroidInstall,
   onLogout,
 }) => {
   const roleBadgeColors: Record<string, { bg: string; text: string; label: string }> = {
@@ -277,6 +280,24 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
           <div className="pt-3 mt-2 border-t border-slate-800/80 px-2 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
             Fasilitas Cepat
           </div>
+
+          {onOpenAndroidInstall && (
+            <button
+              onClick={() => {
+                onOpenAndroidInstall();
+                onClose();
+              }}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-pink-300 hover:text-pink-200 bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/30 transition"
+            >
+              <div className="flex items-center gap-2.5">
+                <Smartphone className="w-4 h-4 text-pink-400 shrink-0 animate-pulse" />
+                <span>Pasang di HP Android</span>
+              </div>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-pink-500 text-white font-black uppercase">
+                PWA
+              </span>
+            </button>
+          )}
 
           <button
             onClick={() => {

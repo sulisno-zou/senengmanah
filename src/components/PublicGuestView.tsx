@@ -26,6 +26,7 @@ import {
   KeyRound,
   ShieldAlert,
   Download,
+  Smartphone,
 } from 'lucide-react';
 import { ClubSettings, NewsArticle, RegistrationRequest, UserAccount, Gender, AgeCategory, BowDivision } from '../types';
 
@@ -36,6 +37,7 @@ interface PublicGuestViewProps {
   registrations: RegistrationRequest[];
   onLogin: (user: UserAccount) => void;
   onSubmitRegistration: (newReg: RegistrationRequest) => void;
+  onOpenAndroidInstall?: () => void;
 }
 
 type GuestTab = 'login' | 'news' | 'register' | 'check_status';
@@ -47,6 +49,7 @@ export const PublicGuestView: React.FC<PublicGuestViewProps> = ({
   registrations,
   onLogin,
   onSubmitRegistration,
+  onOpenAndroidInstall,
 }) => {
   const [activeGuestTab, setActiveGuestTab] = useState<GuestTab>('login');
 
@@ -272,7 +275,17 @@ export const PublicGuestView: React.FC<PublicGuestViewProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-pink-500/10 text-pink-300 border border-pink-500/30">
+            {onOpenAndroidInstall && (
+              <button
+                onClick={onOpenAndroidInstall}
+                className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 border border-pink-500/40 shadow-sm transition-all active:scale-95 flex items-center gap-1.5"
+                title="Pasang Aplikasi Seneng Manah di HP Android"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
+                <span className="hidden sm:inline">Pasang di</span> Android
+              </button>
+            )}
+            <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-pink-500/10 text-pink-300 border border-pink-500/30">
               <Target className="w-3.5 h-3.5 text-pink-400" />
               World Archery
             </span>
@@ -285,6 +298,34 @@ export const PublicGuestView: React.FC<PublicGuestViewProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Android PWA Quick Banner for Mobile Visitors */}
+        {onOpenAndroidInstall && (
+          <div className="max-w-4xl mx-auto mt-2.5 px-1">
+            <div className="flex items-center justify-between gap-3 p-2.5 sm:p-3 rounded-xl bg-gradient-to-r from-pink-950/60 via-purple-950/40 to-slate-900 border border-pink-500/30 shadow-md">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center shrink-0 border border-pink-500/30">
+                  <Smartphone className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white truncate">
+                    Bisa Dipasang di HP Android! 📱
+                  </p>
+                  <p className="text-[10px] text-pink-300/80 truncate">
+                    Pasang sebagai aplikasi langsung di layar utama (PWA) tanpa download APK
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onOpenAndroidInstall}
+                className="px-3 py-1.5 rounded-lg bg-pink-500 hover:bg-pink-600 text-white text-xs font-black shrink-0 transition shadow-sm active:scale-95 flex items-center gap-1"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Pasang Sekarang</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Mobile Navigation Tabs (Segmented Control) */}
         <div className="max-w-4xl mx-auto mt-3">

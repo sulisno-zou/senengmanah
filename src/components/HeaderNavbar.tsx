@@ -16,6 +16,7 @@ import {
   FolderArchive,
   Download,
   Cloud,
+  Smartphone,
 } from 'lucide-react';
 import { ClubSettings, TabType, UserAccount, UserRole } from '../types';
 
@@ -33,6 +34,7 @@ interface HeaderNavbarProps {
   onOpenVerificationModal: () => void;
   onOpenPaymentProofModal: () => void;
   onOpenDownloadAll?: () => void;
+  onOpenAndroidInstall?: () => void;
   onLogout: () => void;
 }
 
@@ -50,6 +52,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   onOpenVerificationModal,
   onOpenPaymentProofModal,
   onOpenDownloadAll,
+  onOpenAndroidInstall,
   onLogout,
 }) => {
   const isSuperAdmin = currentUser.role === 'super_admin';
@@ -114,6 +117,18 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
               <Cloud className="w-3.5 h-3.5 text-emerald-400" />
               <span>Cloud Live</span>
             </div>
+
+            {/* Quick Install Android Button */}
+            {onOpenAndroidInstall && (
+              <button
+                onClick={onOpenAndroidInstall}
+                className="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-gradient-to-r from-pink-500/20 to-purple-500/20 hover:from-pink-500/30 hover:to-purple-500/30 text-pink-300 border border-pink-500/40 text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                title="Pasang Aplikasi di HP Android"
+              >
+                <Smartphone className="w-4 h-4 text-pink-400 animate-pulse" />
+                <span className="hidden lg:inline">Pasang Android</span>
+              </button>
+            )}
 
             {/* Quick KTA / Scanner Button */}
             <button

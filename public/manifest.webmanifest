@@ -1,0 +1,26 @@
+{
+  "name": "SENENG MANAH SHOOTING CLASS BATU",
+  "short_name": "Seneng Manah",
+  "description": "Sistem Informasi & Manajemen Klub Panahan Seneng Manah Horsebow Kota Batu",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "orientation": "portrait-primary",
+  "categories": ["sports", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=192&auto=format&fit=crop&q=80",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=512&auto=format&fit=crop&q=80",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -56,6 +56,7 @@ import { PaymentProofModal } from './components/PaymentProofModal';
 import { RoleLoginModal } from './components/RoleLoginModal';
 import { NewsManagerModal } from './components/NewsManagerModal';
 import { DownloadAllModal } from './components/DownloadAllModal';
+import { AndroidInstallModal } from './components/AndroidInstallModal';
 import {
   LayoutDashboard,
   Users,
@@ -66,6 +67,7 @@ import {
   Bot,
   Menu,
   BellRing,
+  Smartphone,
   X,
 } from 'lucide-react';
 
@@ -97,8 +99,36 @@ export default function App() {
   const [isPaymentProofModalOpen, setIsPaymentProofModalOpen] = useState(false);
   const [isNewsManagerOpen, setIsNewsManagerOpen] = useState(false);
   const [isDownloadAllOpen, setIsDownloadAllOpen] = useState(false);
+  const [isAndroidInstallOpen, setIsAndroidInstallOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [cardAthlete, setCardAthlete] = useState<Athlete | null>(null);
   const [newRegistrantToast, setNewRegistrantToast] = useState<RegistrationRequest | null>(null);
+
+  // Listen to PWA beforeinstallprompt on Android/mobile browsers
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
+  }, []);
+
+  // Trigger PWA Android install
+  const handleTriggerAndroidInstall = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      if (choice && choice.outcome === 'accepted') {
+        setDeferredPrompt(null);
+        setIsAndroidInstallOpen(false);
+      }
+    } else {
+      setIsAndroidInstallOpen(true);
+    }
+  };
 
   // Web Audio chime for incoming mobile registrations
   const playNewRegistrationAlertSound = () => {
@@ -633,14 +663,23 @@ export default function App() {
   // =========================================================================
   if (!isLoggedIn || !currentUser) {
     return (
-      <PublicGuestView
-        clubSettings={clubSettings}
-        newsList={newsList}
-        users={users}
-        registrations={registrations}
-        onLogin={handleLogin}
-        onSubmitRegistration={handleSubmitRegistration}
-      />
+      <>
+        <PublicGuestView
+          clubSettings={clubSettings}
+          newsList={newsList}
+          users={users}
+          registrations={registrations}
+          onLogin={handleLogin}
+          onSubmitRegistration={handleSubmitRegistration}
+          onOpenAndroidInstall={() => setIsAndroidInstallOpen(true)}
+        />
+        <AndroidInstallModal
+          isOpen={isAndroidInstallOpen}
+          onClose={() => setIsAndroidInstallOpen(false)}
+          deferredPrompt={deferredPrompt}
+          onInstallClick={handleTriggerAndroidInstall}
+        />
+      </>
     );
   }
 
@@ -689,6 +728,7 @@ export default function App() {
         onOpenPaymentProof={() => setIsPaymentProofModalOpen(true)}
         onOpenRoleSwitch={() => setIsLoginModalOpen(true)}
         onOpenDownloadAll={() => setIsDownloadAllOpen(true)}
+        onOpenAndroidInstall={() => setIsAndroidInstallOpen(true)}
         onLogout={handleLogout}
       />
 
@@ -714,6 +754,7 @@ export default function App() {
           onOpenVerificationModal={() => setIsScanKTAModalOpen(true)}
           onOpenPaymentProofModal={() => setIsPaymentProofModalOpen(true)}
           onOpenDownloadAll={() => setIsDownloadAllOpen(true)}
+          onOpenAndroidInstall={() => setIsAndroidInstallOpen(true)}
           onLogout={handleLogout}
         />
 
@@ -1125,6 +1166,14 @@ export default function App() {
         clubSettings={clubSettings}
         currentUser={currentUser}
         onRestoreData={handleRestoreData}
+      />
+
+      {/* 10. Pasang di Android Modal (PWA) */}
+      <AndroidInstallModal
+        isOpen={isAndroidInstallOpen}
+        onClose={() => setIsAndroidInstallOpen(false)}
+        deferredPrompt={deferredPrompt}
+        onInstallClick={handleTriggerAndroidInstall}
       />
     </div>
   );
