@@ -531,6 +531,36 @@ export default function App() {
     syncDeleteDoc(COLLECTIONS.USERS, `usr-${id}`);
   };
 
+  const handleBatchImportAthletes = (importedList: Athlete[]) => {
+    setAthletes((prev) => {
+      const athleteMap = new Map(prev.map((a) => [a.id, a]));
+      importedList.forEach((item) => {
+        const existing = prev.find((a) => a.memberNo === item.memberNo || a.id === item.id);
+        const finalAthlete: Athlete = existing ? { ...item, id: existing.id } : item;
+        athleteMap.set(finalAthlete.id, finalAthlete);
+        syncSaveDoc(COLLECTIONS.ATHLETES, finalAthlete);
+
+        // Also create/sync user account
+        const roleLevel = finalAthlete.userRole || 'atlit';
+        const accUsername = finalAthlete.username || finalAthlete.memberNo.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const accPassword = finalAthlete.password || 'password123';
+
+        const userAcc: UserAccount = {
+          id: `usr-${finalAthlete.id}`,
+          username: accUsername,
+          password: accPassword,
+          name: finalAthlete.name,
+          role: roleLevel,
+          athleteId: finalAthlete.id,
+          phone: finalAthlete.phone,
+          avatar: finalAthlete.photoUrl,
+        };
+        syncSaveDoc(COLLECTIONS.USERS, userAcc);
+      });
+      return Array.from(athleteMap.values());
+    });
+  };
+
   // SPP Handlers
   const handleUpdatePayment = (updated: SPPPayment) => {
     setSppPayments(sppPayments.map((p) => (p.id === updated.id ? updated : p)));
@@ -866,6 +896,7 @@ export default function App() {
               onOpenReportForAthlete={setReportAthleteId}
               onOpenMemberCardModal={setCardAthlete}
               onOpenVerificationModal={() => setIsScanKTAModalOpen(true)}
+              onBatchImportAthletes={handleBatchImportAthletes}
             />
           )}
 

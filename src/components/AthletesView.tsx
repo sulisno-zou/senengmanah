@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { Athlete, BowDivision, AgeCategory, Gender, UserAccount, ClubSettings } from '../types';
 import { formatDateIndo, formatRupiah } from '../utils/formatters';
+import { AthleteImportExportModal } from './AthleteImportExportModal';
 
 interface AthletesViewProps {
   athletes: Athlete[];
@@ -37,6 +38,7 @@ interface AthletesViewProps {
   onOpenReportForAthlete: (athleteId: string) => void;
   onOpenMemberCardModal: (athlete: Athlete) => void;
   onOpenVerificationModal: (athleteId: string) => void;
+  onBatchImportAthletes?: (athletes: Athlete[]) => void;
 }
 
 export const AthletesView: React.FC<AthletesViewProps> = ({
@@ -49,12 +51,14 @@ export const AthletesView: React.FC<AthletesViewProps> = ({
   onOpenReportForAthlete,
   onOpenMemberCardModal,
   onOpenVerificationModal,
+  onBatchImportAthletes,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDivision, setSelectedDivision] = useState<string>('ALL');
   const [selectedAgeCategory, setSelectedAgeCategory] = useState<string>('ALL');
   const [detailAthlete, setDetailAthlete] = useState<Athlete | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportExportOpen, setIsImportExportOpen] = useState(false);
   const [editingAthlete, setEditingAthlete] = useState<Athlete | null>(null);
 
   const isSuperAdmin = currentUser.role === 'super_admin';
@@ -220,6 +224,17 @@ export const AthletesView: React.FC<AthletesViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {(isSuperAdmin || isAdmin) && (
+            <button
+              onClick={() => setIsImportExportOpen(true)}
+              className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-pink-300 border border-pink-500/30 text-xs font-bold transition shadow-xs"
+              title="Impor dan Ekspor Data Atlet (CSV / Excel / JSON)"
+            >
+              <Upload className="w-3.5 h-3.5 text-pink-400" />
+              <span>Impor & Ekspor Data</span>
+            </button>
+          )}
+
           <button
             onClick={() => onOpenVerificationModal(athletes[0]?.id)}
             className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold transition"
@@ -922,6 +937,28 @@ export const AthletesView: React.FC<AthletesViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Impor dan Ekspor Data Atlet Modal */}
+      <AthleteImportExportModal
+        isOpen={isImportExportOpen}
+        onClose={() => setIsImportExportOpen(false)}
+        athletes={athletes}
+        currentUser={currentUser}
+        onBatchImportAthletes={(importedList) => {
+          if (onBatchImportAthletes) {
+            onBatchImportAthletes(importedList);
+          } else {
+            importedList.forEach((ath) => {
+              const exists = athletes.find((a) => a.id === ath.id || a.memberNo === ath.memberNo);
+              if (exists) {
+                onUpdateAthlete({ ...ath, id: exists.id });
+              } else {
+                onAddAthlete(ath);
+              }
+            });
+          }
+        }}
+      />
     </div>
   );
 };

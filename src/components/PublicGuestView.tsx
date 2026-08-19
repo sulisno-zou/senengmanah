@@ -95,29 +95,6 @@ export const PublicGuestView: React.FC<PublicGuestViewProps> = ({
   // Status check states
   const [statusSearchQuery, setStatusSearchQuery] = useState('');
   const [searchedRegResult, setSearchedRegResult] = useState<RegistrationRequest | null | undefined>(undefined);
-  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
-
-  const handleDownloadSourceZip = async () => {
-    setIsDownloadingZip(true);
-    try {
-      const response = await fetch('/api/download-source-zip');
-      if (!response.ok) throw new Error('Gagal mengunduh ZIP');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `seneng-manah-horsebow-project-source.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      console.error('Download error:', err);
-      window.location.href = '/api/download-source-zip';
-    } finally {
-      setIsDownloadingZip(false);
-    }
-  };
 
   // Generate new captcha numbers
   const refreshCaptcha = () => {
@@ -1164,16 +1141,8 @@ export const PublicGuestView: React.FC<PublicGuestViewProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            <a
-              href="/api/download-source-zip"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/30 text-xs font-bold transition-all shadow-sm"
-              title="Unduh Berkas Source Code Lengkap ZIP"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Unduh Source Code ZIP</span>
-            </a>
             <span className="text-slate-500 text-xs">
-              © {new Date().getFullYear()} {clubSettings.clubName}
+              © {new Date().getFullYear()} {clubSettings.clubName} • Horsebow Kota Batu
             </span>
           </div>
         </div>
