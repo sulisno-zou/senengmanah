@@ -285,7 +285,57 @@ export interface AttendanceRecord {
   checkInTime?: string;
 }
 
-export type TabType = 'dashboard' | 'athletes' | 'registrations' | 'spp' | 'scoring' | 'attendance' | 'ai_coach' | 'news' | 'member_card';
+export type TabType = 'dashboard' | 'athletes' | 'registrations' | 'spp' | 'scoring' | 'attendance' | 'financial_report' | 'athlete_progress' | 'ai_coach' | 'news' | 'member_card';
+
+export interface CashflowTransaction {
+  id: string;
+  type: 'INCOME' | 'EXPENSE';
+  category: 'SPP_BULANAN' | 'PENDAFTARAN_ANGGOTA' | 'DONASI_SPONSOR' | 'PENJUALAN_MERCHANDISE' | 'PERALATAN_BANTALAN_TARGET' | 'PERAWATAN_LAPANGAN' | 'HONOR_PELATIH' | 'KONSUMSI_EVENT' | 'BIAYA_LOMBA' | 'LAIN_LAIN';
+  amount: number;
+  date: string; // YYYY-MM-DD
+  title: string;
+  description?: string;
+  paymentMethod: PaymentMethod;
+  referenceNo?: string;
+  athleteId?: string;
+  athleteName?: string;
+  recordedBy: string;
+  receiptNumber?: string;
+  createdAt: string;
+}
+
+export interface TopicScoreItem {
+  topic: HorseBowTopic;
+  aspect: string;
+  score: number; // 0-100
+  grade: 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D';
+  notes: string;
+}
+
+export interface AthleteProgressEvaluation {
+  id: string;
+  athleteId: string;
+  athleteName: string;
+  periodType: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
+  startDate: string;
+  endDate: string;
+  periodLabel: string; // e.g. "Harian - 18 Agustus 2026", "Mingguan", "Bulan Agustus 2026", "Tahun 2026"
+  attendanceRatePercent: number;
+  totalArrowsShot: number;
+  highestScore: number;
+  averageScore: number;
+  overallScore: number; // 0-100
+  overallGrade: string; // e.g. "A (Sangat Memuaskan)"
+  topicEvaluations: TopicScoreItem[];
+  physicalConditionNotes?: string;
+  drawWeightCurrentLbs?: number;
+  coachFeedback: string;
+  recommendations: string[];
+  assessedBy: string;
+  assessedByRole: UserRole;
+  assessedAt: string;
+  updatedAt?: string;
+}
 
 export type ThemePreset = 'pink_blue_purple' | 'midnight_purple' | 'royal_blue_pink' | 'emerald_purple';
 

@@ -1,6 +1,6 @@
 {
   "name": "Sistem Pemantauan SPP & Latihan Panahan",
-  "description": "Sistem manajemen klub panahan dan penilaian atlit HORSE BOW dengan 6 topik khusus (Latihan Rutin, Persiapan Lomba, HBA, Berkuda, FAST SHOOTING, DYNAMIC), kartu anggota KTA berbarcode warna kustom, warta berita beranda, dan kontrol hak akses multi-peran.",
+  "description": "Sistem manajemen klub panahan dan penilaian atlit HORSE BOW dengan 6 topik khusus, laporan keuangan fleksibel (harian, mingguan, bulanan, tahunan), raport perkembangan atlet berkala, kartu anggota KTA digital berbarcode, dan sinkronisasi cloud multi-peran.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

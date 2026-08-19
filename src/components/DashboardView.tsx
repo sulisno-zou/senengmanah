@@ -181,6 +181,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             )}
 
             <button
+              onClick={() => onNavigateTab('athlete_progress')}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-95 text-white text-xs font-bold uppercase tracking-wider shadow-lg shadow-purple-500/20 transition-transform active:scale-95 border border-purple-400/30"
+              title="Laporan Perkembangan & Raport Atlet"
+            >
+              <Award className="w-4 h-4" />
+              <span>Rapor Atlet</span>
+            </button>
+
+            {(currentUser.role === 'super_admin' || currentUser.role === 'admin') && (
+              <button
+                onClick={() => onNavigateTab('financial_report')}
+                className="flex-1 sm:flex-none inline-flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-95 text-white text-xs font-bold uppercase tracking-wider shadow-lg shadow-emerald-500/20 transition-transform active:scale-95 border border-emerald-400/30"
+                title="Laporan Keuangan & Kas Klub"
+              >
+                <DollarSign className="w-4 h-4" />
+                <span>Laporan Keuangan</span>
+              </button>
+            )}
+
+            <button
               onClick={() => onOpenMemberCardModal(athletes[0])}
               className="flex-1 sm:flex-none inline-flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-600 hover:opacity-95 text-white text-xs font-bold uppercase tracking-wider shadow-lg shadow-pink-500/20 transition-transform active:scale-95"
             >

@@ -30,6 +30,8 @@ import {
   PaymentProof,
   ClubSettings,
   UserAccount,
+  CashflowTransaction,
+  AthleteProgressEvaluation,
 } from '../types';
 import { formatRupiah, formatDateIndo, formatMonthYearIndo } from '../utils/formatters';
 
@@ -43,6 +45,8 @@ interface DownloadAllModalProps {
   registrations: RegistrationRequest[];
   newsArticles: NewsArticle[];
   paymentProofs: PaymentProof[];
+  cashflowTransactions?: CashflowTransaction[];
+  savedEvaluations?: AthleteProgressEvaluation[];
   clubSettings: ClubSettings;
   currentUser: UserAccount;
   onRestoreData?: (importedData: any) => void;
@@ -58,6 +62,8 @@ export const DownloadAllModal: React.FC<DownloadAllModalProps> = ({
   registrations,
   newsArticles,
   paymentProofs,
+  cashflowTransactions = [],
+  savedEvaluations = [],
   clubSettings,
   currentUser,
   onRestoreData,
@@ -65,33 +71,6 @@ export const DownloadAllModal: React.FC<DownloadAllModalProps> = ({
   const [isZipping, setIsZipping] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
-  const [isDownloadingSource, setIsDownloadingSource] = useState(false);
-  const [sourceDownloadSuccess, setSourceDownloadSuccess] = useState(false);
-
-  const handleDownloadSourceZip = async () => {
-    setIsDownloadingSource(true);
-    setSourceDownloadSuccess(false);
-    try {
-      const response = await fetch('/api/download-source-zip');
-      if (!response.ok) throw new Error('Gagal mengunduh ZIP');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `seneng-manah-horsebow-project-source_${todayStr}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      setSourceDownloadSuccess(true);
-    } catch (err: any) {
-      console.error('Download error:', err);
-      // Fallback direct navigation
-      window.location.href = '/api/download-source-zip';
-    } finally {
-      setIsDownloadingSource(false);
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -857,62 +836,6 @@ Dikelola oleh: ${clubSettings.clubName} - Kota Batu, Jawa Timur
               </div>
             )}
           </div>
-
-          {/* Export Source Code Proyek Direct Download Section (Khusus Super Admin) */}
-          {currentUser.role === 'super_admin' && (
-            <div className="p-4 sm:p-5 bg-gradient-to-r from-purple-950/40 via-indigo-950/40 to-slate-900 rounded-2xl border-2 border-purple-500/40 space-y-3">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-purple-600/30 border border-purple-500/50 flex items-center justify-center text-purple-300 shrink-0">
-                    <Code2 className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-black text-white flex items-center gap-2">
-                      <span>Download Source Code Proyek (ZIP Lengkap)</span>
-                      <span className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full font-bold">
-                        Khusus Super Admin
-                      </span>
-                    </h4>
-                    <p className="text-xs text-slate-300">
-                      Unduh seluruh file kode sumber aplikasi (React, TypeScript, Vite, Tailwind, Server) dalam 1 berkas ZIP siap pakai.
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleDownloadSourceZip}
-                  disabled={isDownloadingSource}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 transition-all shadow-md shadow-purple-500/20 active:scale-95 flex items-center justify-center gap-2 shrink-0 border border-purple-400/40 disabled:opacity-50"
-                >
-                  {isDownloadingSource ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Mengunduh ZIP...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4" />
-                      <span>Unduh ZIP Source Code</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {sourceDownloadSuccess && (
-                <div className="p-2.5 bg-emerald-950/60 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>Berhasil mengunduh berkas ZIP Source Code! Berkas siap diupload ke Vercel.</span>
-                </div>
-              )}
-
-              <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-[11px] text-slate-400 flex items-start gap-2">
-                <Info className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
-                <span>
-                  <strong>Hak Akses Super Admin:</strong> Anda juga dapat mengklik menu titik tiga <strong>(⋮) / Settings</strong> di pojok kanan atas layar AI Studio &rarr; Pilih <strong>"Export to ZIP"</strong> atau <strong>"Export to GitHub"</strong>.
-                </span>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer */}

@@ -29,6 +29,8 @@ export const COLLECTIONS = {
   REGISTRATIONS: 'clubRegistrations',
   SETTINGS: 'clubSettings',
   USERS: 'userAccounts',
+  CASHFLOW: 'cashflowTransactions',
+  ATHLETE_EVALUATIONS: 'athleteEvaluations',
 };
 
 // Generic subscribe to a collection

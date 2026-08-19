@@ -21,6 +21,8 @@ import {
   FolderArchive,
   Download,
   Smartphone,
+  Banknote,
+  Award,
 } from 'lucide-react';
 import { TabType, UserAccount, ClubSettings } from '../types';
 
@@ -73,7 +75,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
   // Filter accessible tabs according to role
   const isSuperAdmin = currentUser.role === 'super_admin';
   const isAdmin = currentUser.role === 'admin' || isSuperAdmin;
-  const isCoach = currentUser.role === 'pelatih_utama' || currentUser.role === 'pelatih';
+  const isCoach = currentUser.role === 'pelatih_utama' || currentUser.role === 'pelatih' || currentUser.role === 'pelatih_atlit';
   const isAthlete = currentUser.role === 'atlit';
 
   const menuItems: {
@@ -113,6 +115,20 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
       badgeCount: isAthlete ? 0 : pendingProofsCount,
       color: 'text-emerald-400',
       visible: isSuperAdmin || isAdmin || isAthlete, // Pelatih is restricted from finance
+    },
+    {
+      id: 'financial_report',
+      label: 'Laporan Keuangan & Kas',
+      icon: Banknote,
+      color: 'text-teal-400',
+      visible: isSuperAdmin || isAdmin,
+    },
+    {
+      id: 'athlete_progress',
+      label: 'Laporan Perkembangan Atlet',
+      icon: Award,
+      color: 'text-purple-400',
+      visible: true,
     },
     {
       id: 'scoring',

@@ -26,6 +26,8 @@ import {
   NewsArticle,
   PaymentProof,
   RegistrationRequest,
+  CashflowTransaction,
+  AthleteProgressEvaluation,
 } from './types';
 import {
   subscribeToCollection,
@@ -46,6 +48,8 @@ import { SPPMonitoringView } from './components/SPPMonitoringView';
 import { TrainingScoringView } from './components/TrainingScoringView';
 import { AttendanceView } from './components/AttendanceView';
 import { AICoachEvaluatorView } from './components/AICoachEvaluatorView';
+import { FinancialReportsView } from './components/FinancialReportsView';
+import { AthleteProgressReportsView } from './components/AthleteProgressReportsView';
 import { NewsFeedSection } from './components/NewsFeedSection';
 import { ReceiptModal } from './components/ReceiptModal';
 import { ReportPrintModal } from './components/ReportPrintModal';
@@ -89,6 +93,8 @@ export default function App() {
   const [users, setUsers] = useState<UserAccount[]>(INITIAL_USERS);
   const [newsList, setNewsList] = useState<NewsArticle[]>(INITIAL_NEWS);
   const [paymentProofs, setPaymentProofs] = useState<PaymentProof[]>([]);
+  const [cashflowTransactions, setCashflowTransactions] = useState<CashflowTransaction[]>([]);
+  const [savedEvaluations, setSavedEvaluations] = useState<AthleteProgressEvaluation[]>([]);
 
   // Modal States
   const [activeReceiptPayment, setActiveReceiptPayment] = useState<SPPPayment | null>(null);
@@ -196,6 +202,14 @@ export default function App() {
     if (data.paymentProofs && Array.isArray(data.paymentProofs)) {
       setPaymentProofs(data.paymentProofs);
       data.paymentProofs.forEach((p: PaymentProof) => syncSaveDoc('paymentProofs', p));
+    }
+    if (data.cashflowTransactions && Array.isArray(data.cashflowTransactions)) {
+      setCashflowTransactions(data.cashflowTransactions);
+      data.cashflowTransactions.forEach((c: CashflowTransaction) => syncSaveDoc(COLLECTIONS.CASHFLOW, c));
+    }
+    if (data.savedEvaluations && Array.isArray(data.savedEvaluations)) {
+      setSavedEvaluations(data.savedEvaluations);
+      data.savedEvaluations.forEach((e: AthleteProgressEvaluation) => syncSaveDoc(COLLECTIONS.ATHLETE_EVALUATIONS, e));
     }
     if (data.clubSettings && typeof data.clubSettings === 'object') {
       setClubSettings(data.clubSettings);
@@ -310,6 +324,20 @@ export default function App() {
       }
     });
 
+    // 12. Real-time Cashflow Transactions listener
+    const unsubCashflow = subscribeToCollection<CashflowTransaction>(COLLECTIONS.CASHFLOW, (cloudCashflow) => {
+      if (cloudCashflow) {
+        setCashflowTransactions(cloudCashflow);
+      }
+    });
+
+    // 13. Real-time Athlete Progress Evaluations listener
+    const unsubEvaluations = subscribeToCollection<AthleteProgressEvaluation>(COLLECTIONS.ATHLETE_EVALUATIONS, (cloudEvals) => {
+      if (cloudEvals) {
+        setSavedEvaluations(cloudEvals);
+      }
+    });
+
     return () => {
       unsubAthletes();
       unsubSPP();
@@ -320,6 +348,8 @@ export default function App() {
       unsubSettings();
       unsubUsers();
       unsubProofs();
+      unsubCashflow();
+      unsubEvaluations();
     };
   }, []);
 
@@ -338,6 +368,8 @@ export default function App() {
         setTrainingSessions([]);
         setAttendanceRecords([]);
         setPaymentProofs([]);
+        setCashflowTransactions([]);
+        setSavedEvaluations([]);
         alert('Berhasil! Seluruh data atlet dan pendaftar telah dikosongkan langsung dari Cloud Firestore.');
       } catch (err) {
         console.error('Failed to clear cloud data:', err);
@@ -676,6 +708,31 @@ export default function App() {
     }
   };
 
+  // Cashflow Handlers
+  const handleAddCashflow = (trx: CashflowTransaction) => {
+    setCashflowTransactions((prev) => [trx, ...prev]);
+    syncSaveDoc(COLLECTIONS.CASHFLOW, trx);
+  };
+
+  const handleDeleteCashflow = (id: string) => {
+    setCashflowTransactions((prev) => prev.filter((t) => t.id !== id));
+    syncDeleteDoc(COLLECTIONS.CASHFLOW, id);
+  };
+
+  // Athlete Evaluation Handlers (Raport / Penilaian Kemajuan)
+  const handleSaveAthleteEvaluation = (evaluation: AthleteProgressEvaluation) => {
+    setSavedEvaluations((prev) => {
+      const idx = prev.findIndex((e) => e.id === evaluation.id);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = evaluation;
+        return updated;
+      }
+      return [evaluation, ...prev];
+    });
+    syncSaveDoc(COLLECTIONS.ATHLETE_EVALUATIONS, evaluation);
+  };
+
   // Switch role handler
   const handleSwitchUser = (user: UserAccount) => {
     setCurrentUser(user);
@@ -726,6 +783,10 @@ export default function App() {
         return 'Verifikasi Pendaftar Anggota Baru';
       case 'spp':
         return 'Monitoring SPP & Verifikasi Transfer';
+      case 'financial_report':
+        return 'Laporan Keuangan & Kas Klub (Harian, Mingguan, Bulanan, Tahunan)';
+      case 'athlete_progress':
+        return 'Laporan Perkembangan & Raport Atlet (Harian, Mingguan, Bulanan, Tahunan)';
       case 'scoring':
         return 'Scoring & Analisis Latihan Panahan';
       case 'attendance':
@@ -921,6 +982,30 @@ export default function App() {
               onAddPayment={handleAddPayment}
               onOpenReceiptModal={setActiveReceiptPayment}
               onOpenPaymentProofModal={() => setIsPaymentProofModalOpen(true)}
+            />
+          )}
+
+          {activeTab === 'financial_report' && (
+            <FinancialReportsView
+              sppPayments={sppPayments}
+              registrations={registrations}
+              cashflowTransactions={cashflowTransactions}
+              clubSettings={clubSettings}
+              currentUser={currentUser}
+              onAddTransaction={handleAddCashflow}
+              onDeleteTransaction={handleDeleteCashflow}
+            />
+          )}
+
+          {activeTab === 'athlete_progress' && (
+            <AthleteProgressReportsView
+              athletes={athletes}
+              trainingSessions={trainingSessions}
+              attendanceRecords={attendanceRecords}
+              savedEvaluations={savedEvaluations}
+              clubSettings={clubSettings}
+              currentUser={currentUser}
+              onSaveEvaluation={handleSaveAthleteEvaluation}
             />
           )}
 
@@ -1194,6 +1279,8 @@ export default function App() {
         registrations={registrations}
         newsArticles={newsList}
         paymentProofs={paymentProofs}
+        cashflowTransactions={cashflowTransactions}
+        savedEvaluations={savedEvaluations}
         clubSettings={clubSettings}
         currentUser={currentUser}
         onRestoreData={handleRestoreData}
