@@ -23,6 +23,7 @@ import {
   Compass,
   Zap,
   CheckSquare,
+  Loader2,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -262,6 +263,94 @@ export const AthleteProgressReportsView: React.FC<AthleteProgressReportsViewProp
     'Tingkatkan latihan beban upper body untuk persiapan naik poundage busur.\nPerbanyak simulasi tanding beregu dan fast shooting 60 detik.'
   );
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [loadingAIEval, setLoadingAIEval] = useState<boolean>(false);
+
+  const handleGenerateAIEvaluation = async () => {
+    if (!activeAthlete) return;
+    setLoadingAIEval(true);
+    try {
+      const res = await fetch('/api/ai/generate-report-evaluation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          athlete: activeAthlete,
+          periodLabel: periodTitle,
+          periodType,
+          scoringStats: {
+            sessionsCount: athleteSessions.length,
+            totalArrows: totalArrowsShot,
+            highestScore,
+            averageScore,
+          },
+          attendanceStats: {
+            attendanceRatePercent: attendancePercent,
+            hadirCount: attendanceCount,
+            totalSession: athleteAttendances.length,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.evaluation) {
+        const evalData = data.evaluation;
+        if (evalData.pillarScores) {
+          setTopicScores([
+            {
+              topic: 'Latihan Rutin',
+              aspect: 'Form Dasar, Anchor, & Rilis Thumb Draw',
+              score: evalData.pillarScores.formThumbDraw || 88,
+              grade: (evalData.pillarScores.formThumbDraw || 88) >= 85 ? 'A' : 'B+',
+              notes: 'Kuncian jempol (Thumb Draw Lock) dan pelepasan konsisten.',
+            },
+            {
+              topic: 'Persiapan Lomba',
+              aspect: 'Simulasi Kejuaraan & Scoring Target 20m/30m',
+              score: evalData.pillarScores.accuracyConsistency || 85,
+              grade: (evalData.pillarScores.accuracyConsistency || 85) >= 85 ? 'A' : 'B+',
+              notes: 'Konsentrasi dan akurasi tinggi pada uji tanding.',
+            },
+            {
+              topic: 'HBA',
+              aspect: 'Horseback Archery Ground Track (Korean & Qabaq)',
+              score: evalData.pillarScores.mentalFocus || 84,
+              grade: (evalData.pillarScores.mentalFocus || 84) >= 85 ? 'A' : 'B+',
+              notes: 'Akurasi dan kecepatan blind nocking pada lintasan ground track.',
+            },
+            {
+              topic: 'Berkuda',
+              aspect: 'Keseimbangan Seat, Postur Canter, & Kendali Kuda',
+              score: evalData.pillarScores.endurance || 82,
+              grade: (evalData.pillarScores.endurance || 82) >= 85 ? 'A' : 'B+',
+              notes: 'Postur badan stabil dan irama gerak selaras dengan langkah kuda.',
+            },
+            {
+              topic: 'FAST SHOOTING',
+              aspect: 'Speed Shooting (< 3 Detik / Arrow) & Blind Nocking',
+              score: evalData.pillarScores.formThumbDraw ? Math.min(100, evalData.pillarScores.formThumbDraw + 3) : 90,
+              grade: 'A+',
+              notes: 'Kecepatan transisi pengambilan anak panah sangat baik.',
+            },
+            {
+              topic: 'DYNAMIC',
+              aspect: 'Dynamic Obstacle Track & Agility Bergerak',
+              score: evalData.pillarScores.bowTuning || 86,
+              grade: 'A',
+              notes: 'Kelincahan manuver rintangan dan akurasi tembakan sambil bergerak.',
+            },
+          ]);
+        }
+        if (evalData.coachFeedback) {
+          setCoachFeedback(evalData.coachFeedback);
+        }
+        if (evalData.recommendations && evalData.recommendations.length > 0) {
+          setRecommendationList(evalData.recommendations.join('\n'));
+        }
+      }
+    } catch (err) {
+      console.error('Error generating AI report evaluation:', err);
+    } finally {
+      setLoadingAIEval(false);
+    }
+  };
 
   // Sync with existing evaluation if found
   useEffect(() => {
@@ -486,13 +575,24 @@ export const AthleteProgressReportsView: React.FC<AthleteProgressReportsViewProp
 
         <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
           {canEditEvaluation && (
-            <button
-              onClick={handleSaveEvaluation}
-              className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-md shadow-purple-600/20 active:scale-95"
-            >
-              <Save className="w-4 h-4" />
-              <span>Simpan Evaluasi</span>
-            </button>
+            <>
+              <button
+                onClick={handleGenerateAIEvaluation}
+                disabled={loadingAIEval}
+                className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:opacity-90 text-slate-950 text-xs font-black transition shadow-md shadow-amber-500/20 active:scale-95 disabled:opacity-50"
+              >
+                {loadingAIEval ? <Loader2 className="w-4 h-4 animate-spin text-slate-950" /> : <Sparkles className="w-4 h-4 text-slate-950" />}
+                <span>{loadingAIEval ? 'Merumuskan...' : 'Analisis AI Rapor'}</span>
+              </button>
+
+              <button
+                onClick={handleSaveEvaluation}
+                className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-md shadow-purple-600/20 active:scale-95"
+              >
+                <Save className="w-4 h-4" />
+                <span>Simpan Evaluasi</span>
+              </button>
+            </>
           )}
 
           <button
