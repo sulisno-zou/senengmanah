@@ -1,0 +1,133 @@
+{
+  "entities": {
+    "athletes": {
+      "title": "Athletes",
+      "description": "Club athlete and member profiles",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "memberNo": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "userRole": { "type": "string" },
+        "username": { "type": "string" },
+        "active": { "type": "boolean" }
+      },
+      "required": ["id", "memberNo", "name"]
+    },
+    "sppPayments": {
+      "title": "SPP Payments",
+      "description": "Monthly fee payment records and proofs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "athleteId": { "type": "string" },
+        "amount": { "type": "number" },
+        "month": { "type": "string" },
+        "year": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "athleteId", "amount", "month", "year", "status"]
+    },
+    "trainingSessions": {
+      "title": "Training Sessions",
+      "description": "Scoring and training evaluation records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "athleteId": { "type": "string" },
+        "date": { "type": "string" },
+        "totalScore": { "type": "number" }
+      },
+      "required": ["id", "athleteId", "date"]
+    },
+    "attendanceRecords": {
+      "title": "Attendance Records",
+      "description": "Attendance check-ins for archery training",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "athleteId": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "date", "athleteId", "status"]
+    },
+    "clubNews": {
+      "title": "Club News",
+      "description": "Announcements and articles for club members",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["id", "title", "date"]
+    },
+    "clubRegistrations": {
+      "title": "Club Registrations",
+      "description": "Online member registration submissions from HP / public",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fullName": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "fullName", "whatsapp", "status"]
+    },
+    "clubSettings": {
+      "title": "Club Settings",
+      "description": "Global club configuration and branding",
+      "type": "object",
+      "properties": {
+        "clubName": { "type": "string" }
+      }
+    },
+    "userAccounts": {
+      "title": "User Accounts",
+      "description": "System accounts for role-based login",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "role": { "type": "string" }
+      },
+      "required": ["id", "username", "role"]
+    }
+  },
+  "firestore": {
+    "athletes": {
+      "schema": "athletes",
+      "description": "Collection of club athletes"
+    },
+    "sppPayments": {
+      "schema": "sppPayments",
+      "description": "Collection of SPP payments"
+    },
+    "trainingSessions": {
+      "schema": "trainingSessions",
+      "description": "Collection of scoring sessions"
+    },
+    "attendanceRecords": {
+      "schema": "attendanceRecords",
+      "description": "Collection of attendance records"
+    },
+    "clubNews": {
+      "schema": "clubNews",
+      "description": "Collection of club news and announcements"
+    },
+    "clubRegistrations": {
+      "schema": "clubRegistrations",
+      "description": "Collection of online registration submissions from mobile devices"
+    },
+    "clubSettings": {
+      "schema": "clubSettings",
+      "description": "Singleton configuration document"
+    },
+    "userAccounts": {
+      "schema": "userAccounts",
+      "description": "Collection of authenticated user accounts"
+    }
+  }
+}

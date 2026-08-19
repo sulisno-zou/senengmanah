@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Permissive rules for club members, public registrants from mobile/HP, and multi-user synchronization
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
