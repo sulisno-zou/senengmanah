@@ -33,6 +33,7 @@ import {
   Upload,
   Camera,
   Image,
+  MessageCircle,
 } from 'lucide-react';
 import { ClubSettings, NewsArticle, RegistrationRequest, UserAccount, Gender, AgeCategory, BowDivision, Athlete } from '../types';
 
@@ -449,24 +450,50 @@ export const PublicGuestView: React.FC<PublicGuestViewProps> = ({
             </div>
 
             {/* Quick Club Info Card */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 shrink-0">
+            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="p-3 rounded-xl bg-gradient-to-tr from-pink-500/20 to-purple-500/20 text-pink-400 border border-pink-500/30 shrink-0">
                   <Building2 className="w-6 h-6" />
                 </div>
-                <div>
+                <div className="space-y-1">
                   <h3 className="text-sm font-bold text-slate-200">Belum memiliki akun klub?</h3>
-                  <p className="text-xs text-slate-400">
-                    Ajukan pendaftaran sebagai atlet baru atau hubungi sekretariat klub.
+                  <p className="text-xs text-slate-300">
+                    Ajukan pendaftaran sebagai atlet baru atau hubungi sekretariat klub{' '}
+                    <a
+                      href={`https://wa.me/${(clubSettings.phone || '081233445566').replace(/[^0-9]/g, '').replace(/^0/, '62')}?text=${encodeURIComponent(
+                        `Halo Sekretariat ${clubSettings.clubName}, saya ingin menanyakan informasi pendaftaran atlet baru / verifikasi akun.`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-bold text-emerald-400 hover:text-emerald-300 underline underline-offset-2 ml-1"
+                    >
+                      <Phone className="w-3.5 h-3.5 inline" />
+                      <span>{clubSettings.phone || '0812-3344-5566'}</span>
+                    </a>
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setActiveGuestTab('register')}
-                className="w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-pink-300 border border-pink-500/30 transition-all shrink-0"
-              >
-                Isi Biodata Pendaftaran
-              </button>
+              
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0">
+                <a
+                  href={`https://wa.me/${(clubSettings.phone || '081233445566').replace(/[^0-9]/g, '').replace(/^0/, '62')}?text=${encodeURIComponent(
+                    `Halo Sekretariat ${clubSettings.clubName}, saya ingin menanyakan informasi pendaftaran atlet baru / konsultasi klub.`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30 transition-all flex items-center justify-center gap-1.5"
+                  title="Hubungi WhatsApp Sekretariat Klub"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>WA Sekretariat ({clubSettings.phone || '0812-3344-5566'})</span>
+                </a>
+                <button
+                  onClick={() => setActiveGuestTab('register')}
+                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white shadow-md shadow-pink-500/20 transition-all"
+                >
+                  Isi Biodata Pendaftaran
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -658,6 +685,17 @@ export const PublicGuestView: React.FC<PublicGuestViewProps> = ({
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                  <a
+                    href={`https://wa.me/${(clubSettings.phone || '081233445566').replace(/[^0-9]/g, '').replace(/^0/, '62')}?text=${encodeURIComponent(
+                      `Halo Sekretariat ${clubSettings.clubName}, saya telah mendaftar online dengan No. Registrasi: ${regSuccessData.regNumber} atas nama ${regSuccessData.name}. Mohon verifikasi permohonan saya.`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Konfirmasi ke WA Sekretariat ({clubSettings.phone || '0812-3344-5566'})</span>
+                  </a>
                   <button
                     onClick={() => {
                       setStatusSearchQuery(regSuccessData.regNumber);
