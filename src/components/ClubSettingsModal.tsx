@@ -630,7 +630,7 @@ export const ClubSettingsModal: React.FC<ClubSettingsModalProps> = ({
                         <div className="text-right">
                           <p className="text-[5.5px] text-slate-500">{currentKTA.backCoachTitle || 'Pelatih Kepala / Penanggung Jawab'}</p>
                           <p className="font-bold text-slate-900 text-[7px] underline font-mono">
-                            {currentKTA.backCoachName || formData.headCoach || formData.coachName || 'Coach Zoulkifli'}
+                            {currentKTA.backCoachName || formData.headCoach || formData.coachName || 'LILING RIAHELDA MAQFIROH'}
                           </p>
                         </div>
                       </div>
@@ -699,7 +699,7 @@ export const ClubSettingsModal: React.FC<ClubSettingsModalProps> = ({
                       type="text"
                       value={currentKTA.backCoachName || ''}
                       onChange={(e) => updateKTAField('backCoachName', e.target.value)}
-                      placeholder="Coach Zoulkifli"
+                      placeholder="LILING RIAHELDA MAQFIROH"
                       className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 font-bold font-mono"
                     />
                   </div>

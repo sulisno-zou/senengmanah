@@ -67,10 +67,15 @@ export const AndroidInstallModal: React.FC<AndroidInstallModalProps> = ({
         {/* Header */}
         <div className="bg-gradient-to-r from-pink-900/50 via-slate-900 to-purple-900/50 p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-pink-500 to-purple-600 p-0.5 shadow-lg shadow-pink-500/30 flex items-center justify-center">
-              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                <Smartphone className="w-6 h-6 text-pink-400" />
-              </div>
+            <div className="w-12 h-12 rounded-2xl bg-white p-0.5 shadow-lg shadow-pink-500/30 flex items-center justify-center overflow-hidden border-2 border-pink-500/40 shrink-0">
+              <img
+                src="/icon-192.png"
+                alt="Icon Seneng Manah"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = '/seneng-manah-logo.svg';
+                }}
+              />
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-black text-white flex items-center gap-2">

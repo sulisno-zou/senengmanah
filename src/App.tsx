@@ -233,37 +233,29 @@ export default function App() {
 
     // 2. Real-time Athletes listener
     const unsubAthletes = subscribeToCollection<Athlete>(COLLECTIONS.ATHLETES, (cloudAthletes) => {
-      if (cloudAthletes && cloudAthletes.length > 0) {
+      if (cloudAthletes) {
         setAthletes(cloudAthletes);
-      } else {
-        setAthletes((prev) => (prev.length > 0 ? prev : INITIAL_ATHLETES));
       }
     });
 
     // 3. Real-time SPP Payments listener
     const unsubSPP = subscribeToCollection<SPPPayment>(COLLECTIONS.SPP_PAYMENTS, (cloudPayments) => {
-      if (cloudPayments && cloudPayments.length > 0) {
+      if (cloudPayments) {
         setSppPayments(cloudPayments);
-      } else {
-        setSppPayments((prev) => (prev.length > 0 ? prev : INITIAL_SPP_PAYMENTS));
       }
     });
 
     // 4. Real-time Training Sessions listener
     const unsubTraining = subscribeToCollection<TrainingSession>(COLLECTIONS.TRAINING_SESSIONS, (cloudSessions) => {
-      if (cloudSessions && cloudSessions.length > 0) {
+      if (cloudSessions) {
         setTrainingSessions(cloudSessions);
-      } else {
-        setTrainingSessions((prev) => (prev.length > 0 ? prev : INITIAL_TRAINING_SESSIONS));
       }
     });
 
     // 5. Real-time Attendance listener
     const unsubAttendance = subscribeToCollection<AttendanceRecord>(COLLECTIONS.ATTENDANCE, (cloudAttendance) => {
-      if (cloudAttendance && cloudAttendance.length > 0) {
+      if (cloudAttendance) {
         setAttendanceRecords(cloudAttendance);
-      } else {
-        setAttendanceRecords((prev) => (prev.length > 0 ? prev : INITIAL_ATTENDANCE));
       }
     });
 

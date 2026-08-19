@@ -713,7 +713,7 @@ export const MemberCardModal: React.FC<MemberCardModalProps> = ({
                   <div className="text-right">
                     <p className="text-[7px] text-slate-500">{kta.backCoachTitle || 'Pelatih Kepala / Penanggung Jawab'}</p>
                     <p className="font-bold text-slate-900 text-[8.5px] mt-0.5 underline font-mono">
-                      {kta.backCoachName || clubSettings.headCoach || clubSettings.coachName || 'Coach Zoulkifli'}
+                      {kta.backCoachName || clubSettings.headCoach || clubSettings.coachName || 'LILING RIAHELDA MAQFIROH'}
                     </p>
                   </div>
                 </div>
@@ -839,7 +839,7 @@ export const MemberCardModal: React.FC<MemberCardModalProps> = ({
                     type="text"
                     value={editKTA.backCoachName || ''}
                     onChange={(e) => updateEditField('backCoachName', e.target.value)}
-                    placeholder="Coach Zoulkifli"
+                    placeholder="LILING RIAHELDA MAQFIROH"
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 font-bold font-mono"
                   />
                 </div>

@@ -132,11 +132,40 @@ export async function seedInitialCloudDataIfEmpty(initialData: {
   users: UserAccount[];
 }) {
   try {
-    // 1. Seed Settings if not exists
+    // 1. Seed / Update Settings if not exists or updating official fields
     const settingsRef = doc(db, COLLECTIONS.SETTINGS, 'global_settings');
     const settingsSnap = await getDocs(collection(db, COLLECTIONS.SETTINGS));
     if (settingsSnap.empty) {
       await setDoc(settingsRef, initialData.clubSettings, { merge: true });
+    } else {
+      const currentData = settingsSnap.docs[0].data() as Partial<ClubSettings>;
+      if (
+        !currentData.bankName ||
+        currentData.bankName.includes('BCA') ||
+        !currentData.bankAccountNumber ||
+        currentData.bankAccountNumber.includes('8720') ||
+        !currentData.bankAccountHolder ||
+        currentData.bankAccountHolder.includes('SENENG MANAH') ||
+        !currentData.headCoach ||
+        currentData.headCoach.includes('Zoulkifli') ||
+        (currentData.ktaSettings && currentData.ktaSettings.backCoachName && currentData.ktaSettings.backCoachName.includes('Zoulkifli'))
+      ) {
+        await setDoc(settingsRef, {
+          defaultMonthlySpp: 150000,
+          bankName: 'Bank Jatim',
+          bankAccountNumber: '0403322822',
+          bankAccountHolder: 'LILING RIAHELDA MAQFIROH',
+          headCoach: 'LILING RIAHELDA MAQFIROH',
+          headCoachName: 'LILING RIAHELDA MAQFIROH',
+          coachName: 'LILING RIAHELDA MAQFIROH',
+          ktaResponsiblePerson: 'LILING RIAHELDA MAQFIROH',
+          ktaSettings: {
+            ...(currentData.ktaSettings || initialData.clubSettings.ktaSettings),
+            backCoachName: 'LILING RIAHELDA MAQFIROH',
+            backCoachTitle: 'Pelatih Utama',
+          },
+        }, { merge: true });
+      }
     }
 
     // 2. Seed News if not exists
