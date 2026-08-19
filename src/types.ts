@@ -20,6 +20,7 @@ export type HorseBowTopic =
   | 'FAST SHOOTING'
   | 'DYNAMIC';
 export type SPPStatus = 'LUNAS' | 'BELUM_BAYAR' | 'TERLAMBAT' | 'BEASISWA' | 'MENUNGGU_VERIFIKASI';
+export type KTAApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'NONAKTIF';
 export type PaymentMethod =
   | 'Transfer Bank'
   | 'Transfer BCA'
@@ -101,6 +102,12 @@ export interface Athlete {
   username?: string;
   password?: string;
   notes?: string;
+  ktaStatus?: KTAApprovalStatus; // 'PENDING' | 'APPROVED' | 'REJECTED' | 'NONAKTIF'
+  ktaApprovedBy?: string;
+  ktaApprovedAt?: string;
+  ktaNotes?: string;
+  leaveReason?: string;
+  leaveDate?: string;
 }
 
 export interface SPPPayment {

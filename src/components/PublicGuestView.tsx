@@ -27,14 +27,18 @@ import {
   ShieldAlert,
   Download,
   Smartphone,
+  QrCode,
+  Lock,
+  UserX,
 } from 'lucide-react';
-import { ClubSettings, NewsArticle, RegistrationRequest, UserAccount, Gender, AgeCategory, BowDivision } from '../types';
+import { ClubSettings, NewsArticle, RegistrationRequest, UserAccount, Gender, AgeCategory, BowDivision, Athlete } from '../types';
 
 interface PublicGuestViewProps {
   clubSettings: ClubSettings;
   newsList: NewsArticle[];
   users: UserAccount[];
   registrations: RegistrationRequest[];
+  athletes?: Athlete[];
   onLogin: (user: UserAccount) => void;
   onSubmitRegistration: (newReg: RegistrationRequest) => void;
   onOpenAndroidInstall?: () => void;
@@ -47,6 +51,7 @@ export const PublicGuestView: React.FC<PublicGuestViewProps> = ({
   newsList,
   users,
   registrations,
+  athletes = [],
   onLogin,
   onSubmitRegistration,
   onOpenAndroidInstall,
