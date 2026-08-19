@@ -30,6 +30,9 @@ import {
   QrCode,
   Lock,
   UserX,
+  Upload,
+  Camera,
+  Image,
 } from 'lucide-react';
 import { ClubSettings, NewsArticle, RegistrationRequest, UserAccount, Gender, AgeCategory, BowDivision, Athlete } from '../types';
 
@@ -415,7 +418,6 @@ export const PublicGuestView: React.FC<PublicGuestViewProps> = ({
                     <label className="block text-xs font-semibold text-slate-300">
                       Password
                     </label>
-                    <span className="text-[11px] text-slate-500">Super Admin: senengm4n4h</span>
                   </div>
                   <div className="relative">
                     <input
@@ -444,14 +446,6 @@ export const PublicGuestView: React.FC<PublicGuestViewProps> = ({
                   Masuk Sekarang
                 </button>
               </form>
-
-              {/* Security & Authentication Info */}
-              <div className="mt-8 pt-6 border-t border-slate-800/80 text-center">
-                <div className="inline-flex items-center gap-2 text-xs text-slate-400 bg-slate-950/60 px-4 py-2 rounded-xl border border-slate-800">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>Sistem Keamanan Berbasis Hak Akses (Super Admin, Admin, Pelatih, Atlet)</span>
-                </div>
-              </div>
             </div>
 
             {/* Quick Club Info Card */}
@@ -730,6 +724,75 @@ export const PublicGuestView: React.FC<PublicGuestViewProps> = ({
                     <h3 className="text-xs font-bold text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
                       <Target className="w-3.5 h-3.5" /> 1. Data Diri Calon Atlet
                     </h3>
+
+                    {/* Foto Pendaftar Calon Atlet */}
+                    <div className="p-4 rounded-2xl bg-slate-950/80 border border-purple-500/30 flex flex-col sm:flex-row items-center gap-4">
+                      <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-slate-900 border-2 border-pink-500 shrink-0 shadow-lg group">
+                        <img
+                          src={regForm.photoUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80'}
+                          alt="Foto Calon Atlet"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] text-white font-bold">
+                          Foto KTA
+                        </div>
+                      </div>
+
+                      <div className="flex-1 space-y-2 text-center sm:text-left w-full">
+                        <div className="flex items-center justify-between flex-wrap gap-1">
+                          <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                            <Camera className="w-3.5 h-3.5 text-pink-400" />
+                            <span>Foto Resmi Calon Atlet (Untuk KTA & Biodata) *</span>
+                          </label>
+                          <span className="text-[10px] text-pink-400 font-bold">Wajib Pas Foto / Close-up</span>
+                        </div>
+                        <p className="text-[11px] text-slate-400">
+                          Unggah foto pas wajah atau pilih dari galeri untuk dicetak langsung pada Kartu Tanda Anggota (KTA) resmi.
+                        </p>
+
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-500 hover:bg-pink-600 text-white text-xs font-bold shadow-sm transition active:scale-95">
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>Unggah Foto (HP/PC)</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    if (reader.result) {
+                                      setRegForm({ ...regForm, photoUrl: reader.result as string });
+                                    }
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                            />
+                          </label>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const randomImgs = [
+                                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+                                'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
+                                'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80',
+                                'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=80',
+                              ];
+                              const pick = randomImgs[Math.floor(Math.random() * randomImgs.length)];
+                              setRegForm({ ...regForm, photoUrl: pick });
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-semibold border border-slate-700 transition"
+                          >
+                            <Image className="w-3.5 h-3.5 text-purple-400" />
+                            <span>Contoh Foto</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                       <div className="sm:col-span-2">
@@ -1146,8 +1209,8 @@ export const PublicGuestView: React.FC<PublicGuestViewProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-slate-500 text-xs">
-              © {new Date().getFullYear()} {clubSettings.clubName} • Horsebow Kota Batu
+            <span className="text-slate-400 font-mono text-xs font-semibold">
+              © {new Date().getFullYear()} {clubSettings.clubName} • <span className="text-pink-400 font-bold">@zou-manahlead2026</span>
             </span>
           </div>
         </div>

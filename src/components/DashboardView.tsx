@@ -18,6 +18,13 @@ import {
   ShieldCheck,
   FolderArchive,
   Download,
+  KeyRound,
+  UserCheck,
+  ShieldAlert,
+  Send,
+  Camera,
+  Activity,
+  FileSpreadsheet,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -34,8 +41,22 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-import { Athlete, SPPPayment, TrainingSession, AttendanceRecord, ClubSettings, NewsArticle, UserAccount } from '../types';
-import { formatRupiah, formatDateIndo, formatMonthYearIndo, generateWhatsAppReminderMessage } from '../utils/formatters';
+import {
+  Athlete,
+  SPPPayment,
+  TrainingSession,
+  AttendanceRecord,
+  ClubSettings,
+  NewsArticle,
+  UserAccount,
+  ProfileUpdateRequest,
+} from '../types';
+import {
+  formatRupiah,
+  formatDateIndo,
+  formatMonthYearIndo,
+  generateWhatsAppReminderMessage,
+} from '../utils/formatters';
 import { NewsFeedSection } from './NewsFeedSection';
 
 interface DashboardViewProps {
@@ -53,6 +74,10 @@ interface DashboardViewProps {
   onOpenPaymentProofModal: () => void;
   onOpenNewsManager: () => void;
   onOpenDownloadAll?: () => void;
+  onOpenImportExportModal?: () => void;
+  onOpenChangeCredentials?: () => void;
+  pendingCredentialRequests?: ProfileUpdateRequest[];
+  onOpenCredentialRequests?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -70,11 +95,286 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenPaymentProofModal,
   onOpenNewsManager,
   onOpenDownloadAll,
+  onOpenImportExportModal,
+  onOpenChangeCredentials,
+  pendingCredentialRequests = [],
+  onOpenCredentialRequests,
 }) => {
   const currentMonth = '2026-08';
+  const isAthleteRole = currentUser.role === 'atlit';
 
-  // Stats calculation
+  // Find linked athlete profile if current user is an athlete
+  const currentAthlete = isAthleteRole
+    ? athletes.find(
+        (a) =>
+          a.id === currentUser.athleteId ||
+          (a.username && a.username.toLowerCase() === currentUser.username.toLowerCase()) ||
+          a.memberNo.toLowerCase() === currentUser.username.toLowerCase()
+      ) || athletes[0]
+    : null;
+
+  // SPP Exemption helper: Pelatih, Pelatih Utama, Admin, Pengurus are exempt from SPP
+  const isExemptFromSPP = (athlete: Athlete | null | undefined) => {
+    if (!athlete) return false;
+    const level = athlete.memberLevel;
+    const role = athlete.userRole;
+    return (
+      level === 'Pelatih' ||
+      level === 'Pelatih Utama' ||
+      level === 'Pengurus' ||
+      role === 'pelatih' ||
+      role === 'pelatih_utama' ||
+      role === 'pelatih_atlit' ||
+      role === 'admin' ||
+      role === 'pengurus'
+    );
+  };
+
+  // =========================================================================
+  // ATHLETE-ONLY VIEW LOGIC
+  // =========================================================================
+  if (isAthleteRole && currentAthlete) {
+    const athleteAttendances = attendanceRecords.filter((r) => r.athleteId === currentAthlete.id);
+    const athleteSessions = trainingSessions.filter((s) => s.athleteId === currentAthlete.id);
+
+    const attendedCount = athleteAttendances.filter((a) => a.status === 'Hadir').length;
+    const totalSessions = athleteAttendances.length;
+    const athleteAttendanceRate =
+      totalSessions > 0 ? Math.round((attendedCount / totalSessions) * 100) : 100;
+
+    const athleteBestScore = athleteSessions.reduce((max, s) => (s.totalScore > max ? s.totalScore : max), 0);
+    const athleteAvgScore =
+      athleteSessions.length > 0
+        ? Math.round(
+            athleteSessions.reduce((sum, s) => sum + s.totalScore, 0) / athleteSessions.length
+          )
+        : 0;
+
+    // Athlete SPP Status
+    const athleteIsExempt = isExemptFromSPP(currentAthlete);
+    const currentMonthPayment = sppPayments.find(
+      (p) => p.athleteId === currentAthlete.id && p.monthYear === currentMonth
+    );
+
+    return (
+      <div className="space-y-8 pb-12 animate-fadeIn">
+        {/* Top Hero Banner */}
+        <div className="relative rounded-3xl overflow-hidden shadow-xl border border-pink-500/30 p-6 sm:p-8 bg-slate-900 text-white">
+          <div className="absolute inset-0 bg-gradient-to-r from-pink-600/30 via-purple-700/40 to-blue-600/30" />
+          <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-pink-500/20 blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-blue-500/20 blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <div className="flex items-center gap-4 sm:gap-5">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-slate-950 p-1 border-2 border-pink-400 shadow-xl shrink-0 flex items-center justify-center">
+                <img
+                  src={clubSettings.logoUrl}
+                  alt="Logo Club"
+                  className="w-full h-full object-contain rounded-full"
+                />
+              </div>
+
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold bg-pink-500/20 text-pink-300 border border-pink-500/30 mb-1.5">
+                  <Target className="w-3.5 h-3.5" />
+                  <span>Portal Mandiri Atlet • {clubSettings.clubName}</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
+                  Halo, {currentAthlete.name}! 🏹
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-300 font-medium mt-0.5">
+                  Nomor KTA: <span className="font-mono text-pink-400 font-bold">{currentAthlete.memberNo}</span> • Divisi: <span className="text-amber-300 font-bold">{currentAthlete.division}</span> ({currentAthlete.ageCategory})
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+              <button
+                onClick={() => onOpenMemberCardModal(currentAthlete)}
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white font-extrabold text-xs shadow-lg shadow-pink-500/25 transition active:scale-95 flex items-center justify-center gap-2"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Lihat KTA Digital Saya</span>
+              </button>
+
+              {onOpenChangeCredentials && (
+                <button
+                  onClick={onOpenChangeCredentials}
+                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs transition flex items-center justify-center gap-2"
+                >
+                  <KeyRound className="w-4 h-4 text-pink-400" />
+                  <span>Ganti Username / Password</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Athlete Personal Stats Overview Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: KTA & Status */}
+          <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-lg space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-400">Status Keanggotaan</span>
+              <div className="w-8 h-8 rounded-xl bg-pink-500/10 text-pink-400 flex items-center justify-center font-bold">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-white">
+                {currentAthlete.active ? 'Aktif Resmi' : 'Nonaktif'}
+              </h3>
+              <p className="text-xs text-pink-400 font-bold mt-0.5">
+                {currentAthlete.memberLevel || 'Atlet Reguler'}
+              </p>
+            </div>
+            <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+              <span>Bergabung:</span>
+              <span className="font-mono text-slate-300">{formatDateIndo(currentAthlete.joinDate)}</span>
+            </div>
+          </div>
+
+          {/* Card 2: Kehadiran Pribadi */}
+          <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-lg space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-400">Tingkat Kehadiran</span>
+              <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold">
+                <CalendarCheck className="w-4 h-4" />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-2xl font-black text-white">{athleteAttendanceRate}%</h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {attendedCount} Hadir dari {totalSessions} Sesi Latihan
+              </p>
+            </div>
+            <div className="pt-2 border-t border-slate-800 text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" />
+              <span>Presensi tercatat otomatis</span>
+            </div>
+          </div>
+
+          {/* Card 3: Rekor Skor Panahan Pribadi */}
+          <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-lg space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-400">Skor Tertinggi Saya</span>
+              <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center font-bold">
+                <Award className="w-4 h-4" />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-2xl font-black text-white">{athleteBestScore || '-'} Poin</h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Rata-rata Skor: <span className="font-bold text-white">{athleteAvgScore || '-'} Poin</span>
+              </p>
+            </div>
+            <div className="pt-2 border-t border-slate-800 text-[11px] text-purple-400 font-semibold flex items-center gap-1">
+              <TrendingUp className="w-3 h-3" />
+              <span>{athleteSessions.length} Sesi Scoring tercatat</span>
+            </div>
+          </div>
+
+          {/* Card 4: Status SPP Pribadi */}
+          <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-lg space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-400">Status SPP ({formatMonthYearIndo(currentMonth)})</span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
+                <DollarSign className="w-4 h-4" />
+              </div>
+            </div>
+            <div>
+              {athleteIsExempt ? (
+                <div>
+                  <h3 className="text-base font-black text-emerald-400">Bebas Biaya SPP</h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Tugas: {currentAthlete.memberLevel}</p>
+                </div>
+              ) : currentMonthPayment?.status === 'LUNAS' ? (
+                <div>
+                  <h3 className="text-xl font-black text-emerald-400">LUNAS</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">{formatRupiah(currentMonthPayment.amount)}</p>
+                </div>
+              ) : currentMonthPayment?.status === 'MENUNGGU_VERIFIKASI' ? (
+                <div>
+                  <h3 className="text-base font-black text-amber-400">Menunggu Verifikasi</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Bukti transfer telah dikirim</p>
+                </div>
+              ) : (
+                <div>
+                  <h3 className="text-base font-black text-rose-400">Belum Dibayar</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">{formatRupiah(clubSettings.monthlySPPAmount || 150000)}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-slate-800">
+              {!athleteIsExempt && currentMonthPayment?.status !== 'LUNAS' ? (
+                <button
+                  onClick={onOpenPaymentProofModal}
+                  className="w-full py-1.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition"
+                >
+                  <Send className="w-3 h-3" />
+                  <span>Kirim Bukti Bayar SPP</span>
+                </button>
+              ) : (
+                <span className="text-[11px] text-slate-400">Kewajiban SPP aman & tertib</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Athlete Training Scores History */}
+        {athleteSessions.length > 0 && (
+          <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+            <h3 className="font-black text-white text-base flex items-center gap-2">
+              <Activity className="w-5 h-5 text-pink-400" />
+              <span>Riwayat Skor & Sesi Latihan Panahan Saya</span>
+            </h3>
+
+            <div className="overflow-x-auto rounded-2xl border border-slate-800">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-bold">
+                  <tr>
+                    <th className="p-3">Tanggal Latihan</th>
+                    <th className="p-3">Jarak & Target</th>
+                    <th className="p-3">Total Skor</th>
+                    <th className="p-3">Rata-rata / Arrow</th>
+                    <th className="p-3">Catatan Pelatih</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 text-slate-300 font-medium">
+                  {athleteSessions.slice(-6).reverse().map((s) => (
+                    <tr key={s.id} className="hover:bg-slate-800/30">
+                      <td className="p-3 font-mono">{formatDateIndo(s.date)}</td>
+                      <td className="p-3">{s.distanceMeters} Meter • {s.totalArrows} Arrows</td>
+                      <td className="p-3 font-black text-pink-400 text-sm">{s.totalScore} Poin</td>
+                      <td className="p-3 font-mono text-emerald-400">
+                        {(s.totalScore / (s.totalArrows || 30)).toFixed(1)} / 10
+                      </td>
+                      <td className="p-3 text-slate-400 text-[11px]">{s.notes || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Official News & Announcements Section */}
+        <NewsFeedSection
+          newsList={newsList}
+          currentUser={currentUser}
+          onOpenNewsManager={onOpenNewsManager}
+        />
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // ADMIN, SUPER ADMIN, PELATIH UTAMA, PELATIH, PENGURUS DASHBOARD
+  // =========================================================================
   const activeAthletes = athletes.filter((a) => a.active);
+
+  // SPP Collection calculation (exclude exempt members like pelatih and pengurus)
   const currentMonthSPP = sppPayments.filter((p) => p.monthYear === currentMonth);
   const totalBilledSPP = currentMonthSPP.reduce((sum, p) => sum + p.amount, 0);
   const totalCollectedSPP = currentMonthSPP
@@ -87,25 +387,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const pendingVerificationSPP = currentMonthSPP.filter((p) => p.status === 'MENUNGGU_VERIFIKASI');
 
   // Attendance rate
-  const recentAttendance = attendanceRecords.slice(-20);
+  const recentAttendance = attendanceRecords.slice(-30);
   const hadirCount = recentAttendance.filter((a) => a.status === 'Hadir').length;
   const avgAttendance = recentAttendance.length > 0 ? Math.round((hadirCount / recentAttendance.length) * 100) : 0;
 
   // Training scores
-  const topScoreSession: TrainingSession | null = trainingSessions.reduce((top: TrainingSession | null, curr: TrainingSession) => {
-    if (!top || curr.totalScore > top.totalScore) return curr;
-    return top;
-  }, null);
+  const topScoreSession: TrainingSession | null = trainingSessions.reduce(
+    (top: TrainingSession | null, curr: TrainingSession) => {
+      if (!top || curr.totalScore > top.totalScore) return curr;
+      return top;
+    },
+    null
+  );
 
-  // Chart 1: SPP Collection monthly trend
-  const sppMonthlyData = [
-    { month: 'Mei', target: 2000000, terkumpul: 2000000 },
-    { month: 'Jun', target: 2000000, terkumpul: 1750000 },
-    { month: 'Jul', target: 2000000, terkumpul: 2000000 },
-    { month: 'Agu (Kini)', target: totalBilledSPP, terkumpul: totalCollectedSPP },
-  ];
-
-  // Chart 2: Division breakdown
+  // Division breakdown
   const divisionCounts: Record<string, number> = {};
   athletes.forEach((a) => {
     divisionCounts[a.division] = (divisionCounts[a.division] || 0) + 1;
@@ -131,11 +426,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     window.open(url, '_blank');
   };
 
+  const pendingCreds = pendingCredentialRequests.filter((r) => r.status === 'MENUNGGU_VERIFIKASI');
+
   return (
-    <div className="space-y-8 pb-12">
-      {/* Top Banner Hero: SENENG MANAH SHOOTING CLASS BATU with Pink-Blue-Purple Gradient */}
+    <div className="space-y-8 pb-12 animate-fadeIn">
+      {/* Top Banner Hero */}
       <div className="relative rounded-3xl overflow-hidden shadow-xl border border-pink-500/30 p-6 sm:p-8 bg-slate-900 text-white">
-        {/* Background ambient lighting */}
         <div className="absolute inset-0 bg-gradient-to-r from-pink-600/30 via-purple-700/40 to-blue-600/30" />
         <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-pink-500/20 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-blue-500/20 blur-3xl pointer-events-none" />
@@ -149,447 +445,229 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 className="w-full h-full object-contain rounded-full"
               />
             </div>
+
             <div>
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold uppercase tracking-wider shadow-sm">
-                  Portal Resmi Klub
-                </span>
-                <span className="text-xs text-pink-300 font-mono font-bold">
-                  KOTA BATU, JAWA TIMUR
-                </span>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold bg-pink-500/20 text-pink-300 border border-pink-500/30 mb-1.5">
+                <Target className="w-3.5 h-3.5" />
+                <span>Dashboard Manajemen • {clubSettings.clubName}</span>
               </div>
-              <h2 className="text-xl sm:text-3xl font-black text-white font-mono tracking-tight leading-tight drop-shadow-sm">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
                 {clubSettings.clubName}
               </h2>
-              <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mt-1">
-                {clubSettings.tagline || 'Mencetak Atlet Panahan Berprestasi, Berkarakter & Berdisiplin Tinggi'}
+              <p className="text-xs sm:text-sm text-slate-300 font-medium mt-0.5">
+                Penanggung Jawab Teknis: <span className="text-pink-400 font-bold">{clubSettings.headCoachName || clubSettings.headCoach || 'Coach Zoulkifli'}</span> • {clubSettings.trainingLocation}
               </p>
             </div>
           </div>
 
-          {/* Quick Action Buttons on Hero */}
-          <div className="flex flex-wrap items-center gap-2.5 self-stretch sm:self-auto">
+          {/* Top Quick Actions */}
+          <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+            {onOpenImportExportModal && (
+              <button
+                onClick={onOpenImportExportModal}
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 font-bold text-xs transition flex items-center justify-center gap-2"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                <span>Excel Impor/Ekspor</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => onOpenMemberCardModal()}
+              className="flex-1 sm:flex-none px-4 py-2.5 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white font-extrabold text-xs shadow-lg shadow-pink-500/25 transition active:scale-95 flex items-center justify-center gap-2"
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>Cetak KTA Digital</span>
+            </button>
+
             {onOpenDownloadAll && (
               <button
                 onClick={onOpenDownloadAll}
-                className="flex-1 sm:flex-none inline-flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:opacity-95 text-white text-xs font-bold uppercase tracking-wider shadow-lg shadow-blue-500/20 transition-transform active:scale-95 border border-blue-400/30"
-                title="Download Semua Data dalam 1 Folder ZIP"
+                className="flex-1 sm:flex-none px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 font-bold text-xs transition flex items-center justify-center gap-2"
               >
-                <FolderArchive className="w-4 h-4 text-sky-200" />
-                <span>Download Semua (ZIP)</span>
+                <Download className="w-4 h-4 text-blue-400" />
+                <span>Download Semua</span>
               </button>
             )}
-
-            <button
-              onClick={() => onNavigateTab('athlete_progress')}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-95 text-white text-xs font-bold uppercase tracking-wider shadow-lg shadow-purple-500/20 transition-transform active:scale-95 border border-purple-400/30"
-              title="Laporan Perkembangan & Raport Atlet"
-            >
-              <Award className="w-4 h-4" />
-              <span>Rapor Atlet</span>
-            </button>
-
-            {(currentUser.role === 'super_admin' || currentUser.role === 'admin') && (
-              <button
-                onClick={() => onNavigateTab('financial_report')}
-                className="flex-1 sm:flex-none inline-flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-95 text-white text-xs font-bold uppercase tracking-wider shadow-lg shadow-emerald-500/20 transition-transform active:scale-95 border border-emerald-400/30"
-                title="Laporan Keuangan & Kas Klub"
-              >
-                <DollarSign className="w-4 h-4" />
-                <span>Laporan Keuangan</span>
-              </button>
-            )}
-
-            <button
-              onClick={() => onOpenMemberCardModal(athletes[0])}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-600 hover:opacity-95 text-white text-xs font-bold uppercase tracking-wider shadow-lg shadow-pink-500/20 transition-transform active:scale-95"
-            >
-              <QrCode className="w-4 h-4" />
-              <span>Cetak KTA Berbarcode</span>
-            </button>
-
-            <button
-              onClick={() => onOpenPaymentProofModal()}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 text-pink-300 border border-pink-500/30 text-xs font-bold uppercase tracking-wider transition shadow-sm"
-            >
-              <CreditCard className="w-4 h-4 text-pink-400" />
-              <span>{currentUser.role === 'atlit' ? 'Kirim Bukti SPP' : 'Verifikasi SPP'}</span>
-            </button>
-
-            <button
-              onClick={() => onOpenVerificationModal()}
-              className="inline-flex items-center justify-center space-x-2 px-3.5 py-2.5 rounded-xl bg-purple-900/40 hover:bg-purple-900/60 text-purple-200 border border-purple-500/30 text-xs font-bold transition"
-              title="Cek & Validasi Barcode Anggota"
-            >
-              <ShieldCheck className="w-4 h-4 text-purple-400" />
-              <span>Scan Barcode</span>
-            </button>
           </div>
         </div>
       </div>
 
-      {/* BERITA & WARTA DI BERANDA (Requested by User) */}
+      {/* Pending Credential Updates Alert Banner (Super Admin & Admin & Pelatih Utama) */}
+      {pendingCreds.length > 0 && onOpenCredentialRequests && (
+        <div className="p-4 rounded-3xl bg-amber-500/10 border border-amber-500/40 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-pulse">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+              <KeyRound className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-extrabold text-amber-300 text-sm">
+                Ada {pendingCreds.length} Permintaan Perubahan Username/Password Atlet
+              </h4>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Atlet mengajukan pembaruan akun. Harap lakukan verifikasi dan persetujuan.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onOpenCredentialRequests}
+            className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow-md transition flex items-center gap-1.5 shrink-0"
+          >
+            <span>Tinjau & Setujui ({pendingCreds.length})</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Stats Cards Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Total Athletes */}
+        <div
+          onClick={() => onNavigateTab('athletes')}
+          className="p-5 rounded-3xl bg-slate-900 border border-slate-800 shadow-lg hover:border-pink-500/40 transition cursor-pointer space-y-3 group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-400">Total Atlet Aktif</span>
+            <div className="w-9 h-9 rounded-2xl bg-pink-500/10 text-pink-400 flex items-center justify-center group-hover:scale-110 transition">
+              <Users className="w-5 h-5" />
+            </div>
+          </div>
+          <div>
+            <h3 className="text-2xl font-black text-white">{activeAthletes.length} Orang</h3>
+            <p className="text-xs text-slate-400 mt-0.5">Dari total {athletes.length} anggota terdaftar</p>
+          </div>
+          <div className="pt-2 border-t border-slate-800 text-[11px] text-pink-400 font-bold flex items-center justify-between">
+            <span>Kelola Data Atlet</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </div>
+
+        {/* Card 2: SPP Terkumpul */}
+        <div
+          onClick={() => onNavigateTab('spp')}
+          className="p-5 rounded-3xl bg-slate-900 border border-slate-800 shadow-lg hover:border-emerald-500/40 transition cursor-pointer space-y-3 group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-400">SPP Bulan Ini ({sppLunasRate}%)</span>
+            <div className="w-9 h-9 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition">
+              <DollarSign className="w-5 h-5" />
+            </div>
+          </div>
+          <div>
+            <h3 className="text-2xl font-black text-emerald-400">{formatRupiah(totalCollectedSPP)}</h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {lunasCount} Lunas • {unpaidSPP.length} Belum Bayar
+            </p>
+          </div>
+          <div className="pt-2 border-t border-slate-800 text-[11px] text-emerald-400 font-bold flex items-center justify-between">
+            <span>Kas & Keuangan SPP</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </div>
+
+        {/* Card 3: Rata-Rata Kehadiran */}
+        <div
+          onClick={() => onNavigateTab('attendance')}
+          className="p-5 rounded-3xl bg-slate-900 border border-slate-800 shadow-lg hover:border-blue-500/40 transition cursor-pointer space-y-3 group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-400">Tingkat Kehadiran</span>
+            <div className="w-9 h-9 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center group-hover:scale-110 transition">
+              <CalendarCheck className="w-5 h-5" />
+            </div>
+          </div>
+          <div>
+            <h3 className="text-2xl font-black text-white">{avgAttendance}%</h3>
+            <p className="text-xs text-slate-400 mt-0.5">Rata-rata 30 sesi latihan terakhir</p>
+          </div>
+          <div className="pt-2 border-t border-slate-800 text-[11px] text-blue-400 font-bold flex items-center justify-between">
+            <span>Presensi & Absensi</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </div>
+
+        {/* Card 4: Top Score Klub */}
+        <div
+          onClick={() => onNavigateTab('reports')}
+          className="p-5 rounded-3xl bg-slate-900 border border-slate-800 shadow-lg hover:border-purple-500/40 transition cursor-pointer space-y-3 group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-400">Skor Scoring Tertinggi</span>
+            <div className="w-9 h-9 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center group-hover:scale-110 transition">
+              <Award className="w-5 h-5" />
+            </div>
+          </div>
+          <div>
+            <h3 className="text-2xl font-black text-white">
+              {topScoreSession ? `${topScoreSession.totalScore} Pts` : 'Belum Ada'}
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5 truncate">
+              {topScoreSession?.athleteName || 'Sesi Scoring'}
+            </p>
+          </div>
+          <div className="pt-2 border-t border-slate-800 text-[11px] text-purple-400 font-bold flex items-center justify-between">
+            <span>Lihat Evaluasi & Progres</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </div>
+      </div>
+
+      {/* Unpaid SPP & Reminders Section */}
+      {unpaidSPP.length > 0 && (
+        <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold">
+                <AlertCircle className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-white text-sm">
+                  Tagihan SPP Belum Lunas ({unpaidSPP.length} Atlet)
+                </h3>
+                <p className="text-xs text-slate-400">Kirimkan pengingat WhatsApp sopan kepada wali atlet</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => onNavigateTab('spp')}
+              className="text-xs text-pink-400 hover:text-pink-300 font-bold flex items-center gap-1"
+            >
+              <span>Lihat Semua Tagihan</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {unpaidSPP.slice(0, 6).map((payment) => (
+              <div
+                key={payment.id}
+                className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs"
+              >
+                <div>
+                  <h4 className="font-bold text-white truncate max-w-[160px]">{payment.athleteName}</h4>
+                  <p className="text-[11px] text-rose-400 font-semibold">{formatRupiah(payment.amount)}</p>
+                </div>
+
+                <button
+                  onClick={() => handleSendReminderWA(payment)}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 font-bold text-[11px] transition flex items-center gap-1 shrink-0"
+                >
+                  <PhoneCall className="w-3 h-3" />
+                  <span>Kirim WA</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Official News & Announcements Section */}
       <NewsFeedSection
         newsList={newsList}
         currentUser={currentUser}
         onOpenNewsManager={onOpenNewsManager}
       />
-
-      {/* 4 Summary Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Card 1: Top Skor Kualifikasi */}
-        <div
-          onClick={() => onNavigateTab('scoring')}
-          className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-pink-300 hover:shadow-md transition cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-xs uppercase font-bold text-slate-400 tracking-widest">Top Skor Kualifikasi</p>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-pink-500 to-purple-600 text-white flex items-center justify-center font-bold shadow-md shadow-pink-500/20">
-              <Award className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="my-2">
-            <h3 className="text-4xl font-black text-slate-900 font-mono tracking-tight">
-              {topScoreSession ? topScoreSession.totalScore : '345'} <span className="text-base font-normal text-slate-400">/ 360</span>
-            </h3>
-          </div>
-          <div className="flex items-center gap-2 text-pink-600">
-            <TrendingUp className="w-4 h-4" />
-            <span className="text-xs font-bold">
-              {topScoreSession ? `${topScoreSession.athleteName.split(' ')[0]} (${topScoreSession.distanceMeters}m)` : 'Rizky (50m)'}
-            </span>
-          </div>
-        </div>
-
-        {/* Card 2: Total Atlet Aktif */}
-        <div
-          onClick={() => onNavigateTab('athletes')}
-          className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-blue-300 hover:shadow-md transition cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-xs uppercase font-bold text-slate-400 tracking-widest">Total Atlet Terdaftar</p>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 text-white flex items-center justify-center font-bold shadow-md shadow-blue-500/20">
-              <Users className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="my-2">
-            <h3 className="text-4xl font-black text-slate-900 font-mono tracking-tight">
-              {activeAthletes.length} <span className="text-base font-normal text-slate-400">atlet</span>
-            </h3>
-          </div>
-          <p className="text-xs text-blue-600 font-bold">
-            Memiliki KTA Barcode Resmi Terverifikasi
-          </p>
-        </div>
-
-        {/* Card 3: SPP Terkumpul & Pending */}
-        <div
-          onClick={() => onNavigateTab('spp')}
-          className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-purple-300 hover:shadow-md transition cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-xs uppercase font-bold text-slate-400 tracking-widest">SPP Bulan Ini ({formatMonthYearIndo(currentMonth)})</p>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 text-white flex items-center justify-center font-bold shadow-md shadow-purple-500/20">
-              <DollarSign className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="my-2">
-            <h3 className="text-3xl sm:text-4xl font-black text-slate-900 font-mono tracking-tight">
-              {sppLunasRate}% <span className="text-base font-normal text-slate-400">Lunas</span>
-            </h3>
-          </div>
-          <p className="text-xs text-emerald-600 font-bold flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>{formatRupiah(totalCollectedSPP)} terkumpul</span>
-          </p>
-        </div>
-
-        {/* Card 4: Disiplin Presensi */}
-        <div
-          onClick={() => onNavigateTab('attendance')}
-          className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between hover:border-indigo-300 hover:shadow-md transition cursor-pointer group"
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-xs uppercase font-bold text-slate-400 tracking-widest">Kehadiran Sesi</p>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold shadow-md shadow-indigo-500/20">
-              <CalendarCheck className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="my-2">
-            <h3 className="text-4xl font-black text-slate-900 font-mono tracking-tight">
-              {avgAttendance}% <span className="text-base font-normal text-slate-400">disiplin</span>
-            </h3>
-          </div>
-          <p className="text-xs text-slate-500 font-medium">Berdasarkan log presensi latihan Seneng Manah</p>
-        </div>
-      </div>
-
-      {/* Main Charts & SPP Summary Row */}
-      <div className="grid grid-cols-12 gap-6">
-        {/* Chart 1: Bar Chart Penerimaan SPP */}
-        <div className="col-span-12 lg:col-span-8 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-xs uppercase font-bold text-slate-400 tracking-widest">Statistik SPP & Anggaran</p>
-              <h4 className="text-base font-bold text-slate-800 mt-0.5">Tren Penerimaan Iuran Bulanan Klub</h4>
-            </div>
-            <button
-              onClick={() => onNavigateTab('spp')}
-              className="text-xs font-bold uppercase tracking-wider text-pink-600 hover:text-pink-700 px-3 py-1.5 bg-pink-50 rounded-lg transition"
-            >
-              Lihat Detail SPP &rarr;
-            </button>
-          </div>
-
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={sppMonthlyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                <XAxis dataKey="month" stroke="#94A3B8" fontSize={12} tickLine={false} />
-                <YAxis
-                  stroke="#94A3B8"
-                  fontSize={11}
-                  tickLine={false}
-                  tickFormatter={(val) => `Rp${val / 1000}k`}
-                />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', borderRadius: '12px', color: '#FFFFFF' }}
-                  formatter={(val: any) => [formatRupiah(Number(val)), '']}
-                />
-                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
-                <Bar dataKey="target" name="Target Tagihan" fill="#CBD5E1" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="terkumpul" name="Dana Terkumpul" fill="#EC4899" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Ringkasan SPP Card (Pink/Blue/Purple Theme) */}
-        <div className="col-span-12 lg:col-span-4 bg-slate-900 text-white p-6 rounded-2xl shadow-xl border border-pink-500/30 flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/10 rounded-full blur-2xl pointer-events-none" />
-
-          <div>
-            <h4 className="text-xs font-bold uppercase text-pink-400 mb-4 tracking-widest flex items-center justify-between">
-              <span>Ringkasan SPP {formatMonthYearIndo(currentMonth)}</span>
-              {pendingVerificationSPP.length > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 text-[10px]">
-                  {pendingVerificationSPP.length} Menunggu
-                </span>
-              )}
-            </h4>
-            <div className="space-y-3.5">
-              <div>
-                <div className="flex justify-between items-center mb-1 text-sm">
-                  <span className="text-slate-300">Target Pelunasan</span>
-                  <span className="font-bold text-white font-mono">{sppLunasRate}%</span>
-                </div>
-                <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 transition-all duration-500"
-                    style={{ width: `${sppLunasRate}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center py-2 border-b border-slate-800 text-xs">
-                <span className="text-slate-400">Total Tagihan:</span>
-                <span className="font-mono font-bold text-slate-200">{formatRupiah(totalBilledSPP)}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-slate-800 text-xs">
-                <span className="text-slate-400">Terkumpul:</span>
-                <span className="font-mono font-bold text-emerald-400">{formatRupiah(totalCollectedSPP)}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-slate-800 text-xs">
-                <span className="text-slate-400">Tunggakan:</span>
-                <span className="font-mono font-bold text-rose-400">{formatRupiah(totalBilledSPP - totalCollectedSPP)}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4 mt-4 border-t border-slate-800 flex gap-2">
-            <button
-              onClick={() => onOpenPaymentProofModal()}
-              className="flex-1 py-2.5 bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white text-[11px] uppercase font-bold tracking-wider rounded-xl transition shadow-md shadow-pink-500/20"
-            >
-              {currentUser.role === 'atlit' ? 'Kirim Bukti SPP' : 'Verifikasi SPP'}
-            </button>
-            <button
-              onClick={() => onNavigateTab('spp')}
-              className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-200 text-[11px] uppercase font-bold tracking-wider rounded-xl transition border border-slate-700"
-            >
-              Laporan SPP
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Row 3: Daftar Monitoring Atlet & KTA */}
-      <div className="grid grid-cols-12 gap-6">
-        {/* Table: Daftar Monitoring Atlet */}
-        <div className="col-span-12 lg:col-span-8 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden">
-          <div className="p-4 sm:p-5 border-b border-slate-100 flex justify-between items-center">
-            <div>
-              <h4 className="text-sm sm:text-base font-black text-slate-900">Daftar Atlet & Status KTA Barcode</h4>
-              <p className="text-xs text-slate-400">Data atlet SENENG MANAH SHOOTING CLASS BATU</p>
-            </div>
-            <button
-              onClick={() => onNavigateTab('athletes')}
-              className="text-xs font-bold text-pink-600 hover:text-pink-700 flex items-center gap-1"
-            >
-              <span>Kelola Semua Atlet</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-slate-50 text-[10px] uppercase text-slate-400 font-bold tracking-wider border-b border-slate-100">
-                <tr>
-                  <th className="px-6 py-3.5">Atlet</th>
-                  <th className="px-6 py-3.5">Divisi & Kategori</th>
-                  <th className="px-6 py-3.5">Alamat Domisili</th>
-                  <th className="px-6 py-3.5">Status SPP</th>
-                  <th className="px-6 py-3.5 text-right">Kartu KTA</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm divide-y divide-slate-100 text-slate-700">
-                {athletes.slice(0, 5).map((ath) => {
-                  const pay = currentMonthSPP.find((p) => p.athleteId === ath.id);
-                  const isPaid = pay?.status === 'LUNAS' || pay?.status === 'BEASISWA';
-                  return (
-                    <tr key={ath.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={ath.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
-                            alt={ath.name}
-                            className="w-9 h-9 rounded-full object-cover border border-slate-200"
-                          />
-                          <div>
-                            <div className="font-bold text-slate-900 text-xs sm:text-sm">{ath.name}</div>
-                            <div className="text-xs text-pink-600 font-mono font-bold">{ath.memberNo}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-xs font-medium text-slate-600">
-                        <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-bold text-[11px] inline-block mb-0.5">
-                          {ath.division}
-                        </span>
-                        <div className="text-[11px] text-slate-400">
-                          {ath.ageCategory} ({ath.gender === 'L' ? 'Putra' : 'Putri'})
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-xs text-slate-500 max-w-[160px] truncate">
-                        {ath.address}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-2.5 py-1 rounded-full font-bold uppercase text-[10px] tracking-wider ${
-                            isPaid
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-amber-50 text-amber-700 border border-amber-200'
-                          }`}
-                        >
-                          {isPaid ? 'LUNAS' : 'BELUM BAYAR'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => onOpenMemberCardModal(ath)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold transition"
-                          title="Cetak KTA Barcode"
-                        >
-                          <QrCode className="w-3.5 h-3.5" />
-                          <span>KTA</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Right Column: Jadwal & SPP Peringatan */}
-        <div className="col-span-12 lg:col-span-4 space-y-6">
-          {/* Jadwal Latihan Sesi */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-            <h4 className="text-xs font-bold uppercase text-slate-400 mb-4 tracking-widest">
-              Jadwal Sesi Latihan Panahan Batu
-            </h4>
-            <div className="space-y-3">
-              <div className="flex gap-4 items-start p-3 rounded-xl bg-pink-50/50 border border-pink-100">
-                <div className="bg-gradient-to-tr from-pink-500 to-purple-600 text-white px-2.5 py-1.5 rounded-lg text-center min-w-[46px] shadow-sm">
-                  <p className="text-[10px] font-bold uppercase">SAB</p>
-                  <p className="text-sm font-black">22</p>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-800">Scoring Test 70m / 50m / 30m</p>
-                  <p className="text-xs text-slate-500">07:30 WIB • Lapangan Seneng Manah Batu</p>
-                </div>
-              </div>
-
-              <div className="flex gap-4 items-start p-3 rounded-xl bg-blue-50/50 border border-blue-100">
-                <div className="bg-gradient-to-tr from-blue-600 to-cyan-500 text-white px-2.5 py-1.5 rounded-lg text-center min-w-[46px] shadow-sm">
-                  <p className="text-[10px] font-bold uppercase">MIN</p>
-                  <p className="text-sm font-black">23</p>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-800">Latihan Fisik & Tuning Alat</p>
-                  <p className="text-xs text-slate-500">08:00 WIB • Lapangan Seneng Manah Batu</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* SPP Belum Lunas Alert */}
-          {unpaidSPP.length > 0 && (
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-xs font-bold uppercase text-rose-500 tracking-widest flex items-center gap-1.5">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  <span>Tunggakan SPP ({unpaidSPP.length})</span>
-                </h4>
-                <button
-                  onClick={() => onNavigateTab('spp')}
-                  className="text-xs font-bold text-pink-600 hover:text-pink-700"
-                >
-                  Kelola SPP &rarr;
-                </button>
-              </div>
-              <div className="space-y-2">
-                {unpaidSPP.slice(0, 3).map((payment) => (
-                  <div
-                    key={payment.id}
-                    className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs"
-                  >
-                    <div>
-                      <p className="font-bold text-slate-800">{payment.athleteName}</p>
-                      <p className="text-slate-400 font-mono">{formatRupiah(payment.amount)}</p>
-                    </div>
-                    <button
-                      onClick={() => handleSendReminderWA(payment)}
-                      className="px-2.5 py-1 bg-green-100 hover:bg-green-200 text-green-700 font-bold rounded-lg text-[11px] uppercase tracking-wider transition"
-                    >
-                      Kirim WA
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Warta & Berita Klub Section */}
-      <div className="pt-2">
-        <NewsFeedSection
-          newsList={newsList}
-          currentUser={currentUser}
-          onOpenNewsManager={onOpenNewsManager}
-        />
-      </div>
     </div>
   );
 };

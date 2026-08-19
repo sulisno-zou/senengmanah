@@ -15,6 +15,7 @@ import {
   Award,
   Upload,
   ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { SPPPayment, Athlete, ClubSettings, SPPStatus, PaymentMethod, UserAccount } from '../types';
@@ -57,11 +58,26 @@ export const SPPMonitoringView: React.FC<SPPMonitoringViewProps> = ({
   const [payNotes, setPayNotes] = useState('');
 
   const isAthlete = currentUser.role === 'atlit';
-  const isCoach = currentUser.role === 'pelatih';
   const canManageSPP =
     currentUser.role === 'super_admin' ||
     currentUser.role === 'admin' ||
     currentUser.role === 'pelatih_utama';
+
+  const isExemptFromSPP = (athlete: Athlete | undefined) => {
+    if (!athlete) return false;
+    const level = athlete.memberLevel;
+    const role = athlete.userRole;
+    return (
+      level === 'Pelatih' ||
+      level === 'Pelatih Utama' ||
+      level === 'Pengurus' ||
+      role === 'pelatih' ||
+      role === 'pelatih_utama' ||
+      role === 'pelatih_atlit' ||
+      role === 'admin' ||
+      role === 'pengurus'
+    );
+  };
 
   // Available months list
   const availableMonths: string[] = Array.from(new Set<string>(sppPayments.map((p) => p.monthYear))).sort().reverse();
@@ -69,7 +85,7 @@ export const SPPMonitoringView: React.FC<SPPMonitoringViewProps> = ({
 
   // Filtered payments for chosen month
   const rawMonthPayments = sppPayments.filter((p) => p.monthYear === selectedMonth);
-  
+
   // If athlete, only show own records
   const monthPayments = isAthlete
     ? rawMonthPayments.filter((p) => {
@@ -81,23 +97,49 @@ export const SPPMonitoringView: React.FC<SPPMonitoringViewProps> = ({
     : rawMonthPayments;
 
   const filteredPayments = monthPayments.filter((p) => {
+    const athlete = athletes.find((a) => a.id === p.athleteId);
     const matchesSearch = p.athleteName.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'ALL' || p.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    
+    if (statusFilter === 'ALL') return matchesSearch;
+    if (statusFilter === 'EXEMPT') return matchesSearch && isExemptFromSPP(athlete);
+    return matchesSearch && p.status === statusFilter && !isExemptFromSPP(athlete);
   });
 
-  // Financial statistics
-  const totalBilled = monthPayments.reduce((sum, p) => sum + p.amount, 0);
+  // Financial statistics with exemption calculation
+  const totalBilled = monthPayments.reduce((sum, p) => {
+    const athlete = athletes.find((a) => a.id === p.athleteId);
+    return isExemptFromSPP(athlete) ? sum : sum + p.amount;
+  }, 0);
+
   const totalCollected = monthPayments
-    .filter((p) => p.status === 'LUNAS' || p.status === 'BEASISWA')
-    .reduce((sum, p) => sum + p.amount, 0);
-  const totalOutstanding = monthPayments
-    .filter((p) => p.status === 'BELUM_BAYAR' || p.status === 'TERLAMBAT')
+    .filter((p) => {
+      const athlete = athletes.find((a) => a.id === p.athleteId);
+      return !isExemptFromSPP(athlete) && (p.status === 'LUNAS' || p.status === 'BEASISWA');
+    })
     .reduce((sum, p) => sum + p.amount, 0);
 
-  const lunasCount = monthPayments.filter((p) => p.status === 'LUNAS').length;
-  const unpaidCount = monthPayments.filter((p) => p.status === 'BELUM_BAYAR' || p.status === 'TERLAMBAT').length;
-  const beasiswaCount = monthPayments.filter((p) => p.status === 'BEASISWA').length;
+  const totalOutstanding = monthPayments
+    .filter((p) => {
+      const athlete = athletes.find((a) => a.id === p.athleteId);
+      return !isExemptFromSPP(athlete) && (p.status === 'BELUM_BAYAR' || p.status === 'TERLAMBAT');
+    })
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const lunasCount = monthPayments.filter((p) => {
+    const athlete = athletes.find((a) => a.id === p.athleteId);
+    return !isExemptFromSPP(athlete) && p.status === 'LUNAS';
+  }).length;
+
+  const unpaidCount = monthPayments.filter((p) => {
+    const athlete = athletes.find((a) => a.id === p.athleteId);
+    return !isExemptFromSPP(athlete) && (p.status === 'BELUM_BAYAR' || p.status === 'TERLAMBAT');
+  }).length;
+
+  const exemptCount = monthPayments.filter((p) => {
+    const athlete = athletes.find((a) => a.id === p.athleteId);
+    return isExemptFromSPP(athlete);
+  }).length;
+
   const pendingCount = monthPayments.filter((p) => p.status === 'MENUNGGU_VERIFIKASI').length;
 
   const handleOpenRecordPayment = (payment: SPPPayment) => {
@@ -168,7 +210,8 @@ export const SPPMonitoringView: React.FC<SPPMonitoringViewProps> = ({
     }
 
     athletes.forEach((athlete) => {
-      const isScholarship = athlete.monthlySppCustomFee === 0;
+      const isExempt = isExemptFromSPP(athlete);
+      const isScholarship = athlete.monthlySppCustomFee === 0 || isExempt;
       const amount = isScholarship ? 0 : (athlete.monthlySppCustomFee ?? clubSettings.defaultMonthlySpp);
       const newPay: SPPPayment = {
         id: `spp-${nextMonth}-${athlete.id}`,
@@ -185,11 +228,11 @@ export const SPPMonitoringView: React.FC<SPPMonitoringViewProps> = ({
     });
 
     setSelectedMonth(nextMonth);
-    alert(`Berhasil membuat tagihan SPP periode ${formatMonthYearIndo(nextMonth)} untuk seluruh atlet!`);
+    alert(`Berhasil membuat tagihan SPP periode ${formatMonthYearIndo(nextMonth)} (Pelatih, Admin, Pengurus otomatis Bebas SPP)!`);
   };
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12 animate-fadeIn">
       {/* Header & Month Selector */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -200,12 +243,11 @@ export const SPPMonitoringView: React.FC<SPPMonitoringViewProps> = ({
             <span>Monitoring SPP & Verifikasi Transfer Online</span>
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Rekapitulasi iuran SPP {clubSettings.clubName}, upload bukti transfer dan kuitansi
+            Rekapitulasi iuran SPP {clubSettings.clubName} • Pelatih, Admin, & Pengurus Bebas SPP
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Quick upload / verify proof button */}
           <button
             onClick={onOpenPaymentProofModal}
             className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-600 hover:opacity-90 text-white text-xs font-bold uppercase tracking-wider shadow-md shadow-pink-500/20 transition"
@@ -214,7 +256,6 @@ export const SPPMonitoringView: React.FC<SPPMonitoringViewProps> = ({
             <span>{isAthlete ? 'Kirim Bukti Pembayaran' : 'Verifikasi Bukti SPP'}</span>
           </button>
 
-          {/* Month Selector */}
           <div className="flex items-center space-x-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
             <span className="text-xs font-bold text-slate-500">Periode:</span>
             <select
@@ -248,7 +289,9 @@ export const SPPMonitoringView: React.FC<SPPMonitoringViewProps> = ({
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Tagihan Periode</p>
           <div className="my-2 text-3xl font-black text-slate-900 font-mono tracking-tight">{formatRupiah(totalBilled)}</div>
-          <p className="text-xs text-slate-500 font-medium">{monthPayments.length} Atlet Terdaftar</p>
+          <p className="text-xs text-slate-500 font-medium">
+            {monthPayments.length} Anggota ({exemptCount} Bebas SPP Pelatih/Pengurus)
+          </p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
@@ -256,7 +299,7 @@ export const SPPMonitoringView: React.FC<SPPMonitoringViewProps> = ({
           <div className="my-2 text-3xl font-black text-emerald-600 font-mono tracking-tight">{formatRupiah(totalCollected)}</div>
           <div className="flex items-center space-x-2 text-xs">
             <span className="text-emerald-600 font-bold">{lunasCount} Lunas</span>
-            {beasiswaCount > 0 && <span className="text-purple-600 font-medium">({beasiswaCount} Beasiswa)</span>}
+            {exemptCount > 0 && <span className="text-purple-600 font-medium">({exemptCount} Bebas SPP)</span>}
           </div>
         </div>
 
@@ -300,7 +343,7 @@ export const SPPMonitoringView: React.FC<SPPMonitoringViewProps> = ({
             { id: 'LUNAS', label: 'Lunas' },
             { id: 'MENUNGGU_VERIFIKASI', label: 'Menunggu Verifikasi' },
             { id: 'BELUM_BAYAR', label: 'Belum Bayar' },
-            { id: 'BEASISWA', label: 'Beasiswa' },
+            { id: 'EXEMPT', label: 'Bebas SPP (Pelatih/Pengurus)' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -323,10 +366,10 @@ export const SPPMonitoringView: React.FC<SPPMonitoringViewProps> = ({
           <table className="w-full text-left text-xs sm:text-sm">
             <thead className="bg-slate-50 text-slate-400 border-b border-slate-100 uppercase text-[10px] font-bold tracking-wider">
               <tr>
-                <th className="px-6 py-3.5">Nama Atlet</th>
-                <th className="px-6 py-3.5">Divisi / Usia</th>
+                <th className="px-6 py-3.5">Nama Anggota</th>
+                <th className="px-6 py-3.5">Level & Peran</th>
                 <th className="px-6 py-3.5">Nominal SPP</th>
-                <th className="px-6 py-3.5">Status</th>
+                <th className="px-6 py-3.5">Status Iuran</th>
                 <th className="px-6 py-3.5">Tanggal / Metode</th>
                 <th className="px-6 py-3.5">No. Kuitansi</th>
                 <th className="px-6 py-3.5 text-right">Aksi</th>
@@ -342,10 +385,10 @@ export const SPPMonitoringView: React.FC<SPPMonitoringViewProps> = ({
               ) : (
                 filteredPayments.map((payment) => {
                   const athlete = athletes.find((a) => a.id === payment.athleteId);
+                  const isExempt = isExemptFromSPP(athlete);
                   const isLunas = payment.status === 'LUNAS';
-                  const isBeasiswa = payment.status === 'BEASISWA';
                   const isPending = payment.status === 'MENUNGGU_VERIFIKASI';
-                  const isUnpaid = payment.status === 'BELUM_BAYAR' || payment.status === 'TERLAMBAT';
+                  const isUnpaid = !isExempt && (payment.status === 'BELUM_BAYAR' || payment.status === 'TERLAMBAT');
 
                   return (
                     <tr key={payment.id} className="hover:bg-slate-50 transition">
@@ -359,41 +402,53 @@ export const SPPMonitoringView: React.FC<SPPMonitoringViewProps> = ({
                         )}
                       </td>
 
-                      {/* Division */}
+                      {/* Level / Role */}
                       <td className="px-6 py-3.5 text-slate-600">
-                        <span>{athlete?.division || '-'}</span>
-                        <span className="block text-[11px] text-slate-400">{athlete?.ageCategory}</span>
+                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                          {athlete?.memberLevel || 'Atlet Reguler'}
+                        </span>
+                        <span className="block text-[11px] text-slate-400 mt-0.5">{athlete?.division || '-'}</span>
                       </td>
 
                       {/* Amount */}
                       <td className="px-6 py-3.5 font-mono font-bold text-slate-900">
-                        {formatRupiah(payment.amount)}
+                        {isExempt ? (
+                          <span className="text-slate-400 line-through text-xs font-normal">Rp 0 (Bebas)</span>
+                        ) : (
+                          formatRupiah(payment.amount)
+                        )}
                       </td>
 
                       {/* Status */}
                       <td className="px-6 py-3.5">
-                        <span
-                          className={`inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                            isLunas
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : isBeasiswa
-                              ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                              : isPending
-                              ? 'bg-pink-50 text-pink-700 border border-pink-200'
-                              : 'bg-amber-50 text-amber-800 border border-amber-200'
-                          }`}
-                        >
-                          {isLunas && <CheckCircle2 className="w-3 h-3" />}
-                          {isUnpaid && <AlertCircle className="w-3 h-3" />}
-                          {isPending && <Clock className="w-3 h-3" />}
-                          {isBeasiswa && <Award className="w-3 h-3" />}
-                          <span>{payment.status.replace('_', ' ')}</span>
-                        </span>
+                        {isExempt ? (
+                          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
+                            <Award className="w-3 h-3 text-purple-600" />
+                            <span>Bebas SPP (Pelatih/Pengurus)</span>
+                          </span>
+                        ) : (
+                          <span
+                            className={`inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              isLunas
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : isPending
+                                ? 'bg-pink-50 text-pink-700 border border-pink-200'
+                                : 'bg-amber-50 text-amber-800 border border-amber-200'
+                            }`}
+                          >
+                            {isLunas && <CheckCircle2 className="w-3 h-3" />}
+                            {isUnpaid && <AlertCircle className="w-3 h-3" />}
+                            {isPending && <Clock className="w-3 h-3" />}
+                            <span>{payment.status.replace('_', ' ')}</span>
+                          </span>
+                        )}
                       </td>
 
                       {/* Payment Info */}
                       <td className="px-6 py-3.5 text-slate-600 text-xs">
-                        {payment.paidDate ? (
+                        {isExempt ? (
+                          <span className="text-slate-400 italic">Otomatis Terverifikasi Sistem</span>
+                        ) : payment.paidDate ? (
                           <div>
                             <span className="text-slate-900 font-medium">{formatDateIndo(payment.paidDate)}</span>
                             <span className="block text-[11px] text-slate-400">{payment.paymentMethod || 'Transfer'}</span>
@@ -450,16 +505,6 @@ export const SPPMonitoringView: React.FC<SPPMonitoringViewProps> = ({
                             <span>Kuitansi</span>
                           </button>
                         )}
-
-                        {isAthlete && isUnpaid && (
-                          <button
-                            onClick={onOpenPaymentProofModal}
-                            className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white text-xs font-bold uppercase tracking-wider transition shadow-xs"
-                          >
-                            <Upload className="w-3 h-3" />
-                            <span>Kirim Bukti</span>
-                          </button>
-                        )}
                       </td>
                     </tr>
                   );
@@ -470,98 +515,78 @@ export const SPPMonitoringView: React.FC<SPPMonitoringViewProps> = ({
         </div>
       </div>
 
-      {/* RECORD PAYMENT MODAL */}
+      {/* Manual Payment Recording Modal */}
       {recordingPayment && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-pink-500/30 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden text-slate-100">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950">
-              <div className="flex items-center space-x-2">
-                <CreditCard className="w-5 h-5 text-pink-400" />
-                <h3 className="text-base font-bold text-white">Catat Pembayaran SPP</h3>
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-fadeIn">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-base">Catat Penerimaan SPP</h3>
+                <p className="text-xs text-slate-500">{recordingPayment.athleteName} • {formatMonthYearIndo(recordingPayment.monthYear)}</p>
               </div>
-              <button
-                onClick={() => setRecordingPayment(null)}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
-              >
+              <button onClick={() => setRecordingPayment(null)} className="p-1 rounded-full text-slate-400 hover:bg-slate-100">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleConfirmPayment} className="p-6 space-y-4 text-xs">
-              <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 text-xs space-y-1.5">
-                <div className="flex justify-between text-slate-400">
-                  <span>Nama Atlet:</span>
-                  <strong className="text-white">{recordingPayment.athleteName}</strong>
-                </div>
-                <div className="flex justify-between text-slate-400">
-                  <span>Periode Tagihan:</span>
-                  <strong className="text-white">{formatMonthYearIndo(recordingPayment.monthYear)}</strong>
-                </div>
-                <div className="flex justify-between text-slate-400">
-                  <span>Jumlah Tagihan:</span>
-                  <strong className="text-pink-400 font-mono font-bold text-sm">
-                    {formatRupiah(recordingPayment.amount)}
-                  </strong>
+            <form onSubmit={handleConfirmPayment} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Nominal Iuran SPP</label>
+                <div className="font-mono font-black text-lg text-pink-600 bg-pink-50 p-2.5 rounded-xl border border-pink-200">
+                  {formatRupiah(recordingPayment.amount)}
                 </div>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-300 mb-1">
-                  Metode Pembayaran
-                </label>
+                <label className="block font-bold text-slate-700 mb-1">Metode Pembayaran *</label>
                 <select
                   value={payMethod}
                   onChange={(e) => setPayMethod(e.target.value as PaymentMethod)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-pink-500 font-medium"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-bold text-slate-800 focus:outline-none focus:border-pink-500"
                 >
-                  <option value="Transfer BCA">Transfer Bank BCA</option>
-                  <option value="Transfer Mandiri">Transfer Bank Mandiri</option>
-                  <option value="Transfer BRI">Transfer Bank BRI</option>
-                  <option value="QRIS">QRIS Klub</option>
-                  <option value="Tunai">Tunai / Cash di Lapangan</option>
-                  <option value="Lainnya">Lainnya</option>
+                  <option value="Transfer BCA">Transfer BCA</option>
+                  <option value="Transfer Mandiri">Transfer Mandiri</option>
+                  <option value="Transfer BSI">Transfer BSI</option>
+                  <option value="Tunai / Kasir">Tunai Langsung di Lapangan</option>
+                  <option value="QRIS">QRIS / E-Wallet</option>
                 </select>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-300 mb-1">
-                  Nomor Referensi / ID Transaksi (Opsional)
-                </label>
+                <label className="block font-bold text-slate-700 mb-1">Nomor Referensi / No. Bukti Transfer (Opsional)</label>
                 <input
                   type="text"
+                  placeholder="Contoh: TRF-BCA-987654"
                   value={payRefNo}
                   onChange={(e) => setPayRefNo(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-pink-500"
-                  placeholder="TRX-12345678"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-mono text-slate-800 focus:outline-none focus:border-pink-500"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-300 mb-1">
-                  Catatan Pembayaran (Opsional)
-                </label>
+                <label className="block font-bold text-slate-700 mb-1">Catatan Tambahan</label>
                 <input
                   type="text"
+                  placeholder="Contoh: Dibayarkan langsung oleh orang tua"
                   value={payNotes}
                   onChange={(e) => setPayNotes(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-pink-500"
-                  placeholder="Diterima oleh bendahara klub"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:outline-none focus:border-pink-500"
                 />
               </div>
 
-              <div className="flex justify-end space-x-2 pt-3 border-t border-slate-800">
+              <div className="pt-2 flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setRecordingPayment(null)}
-                  className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs uppercase tracking-wider"
+                  className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-lg bg-gradient-to-r from-pink-500 via-purple-500 to-blue-600 hover:opacity-90 text-white font-bold text-xs uppercase tracking-wider shadow-md shadow-pink-500/20"
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white font-extrabold shadow-md shadow-pink-500/20"
                 >
-                  Konfirmasi Lunas
+                  Simpan & Terbitkan Kuitansi
                 </button>
               </div>
             </form>

@@ -13,6 +13,7 @@ import {
   Check,
   Eye,
   RotateCcw,
+  FileText,
 } from 'lucide-react';
 import { ClubSettings, ThemePreset, UserAccount, KTACardSettings } from '../types';
 import { SENENG_MANAH_LOGO_SVG, DEFAULT_KTA_SETTINGS } from '../data/initialData';
@@ -460,114 +461,305 @@ export const ClubSettingsModal: React.FC<ClubSettingsModalProps> = ({
                 </div>
               </div>
 
-              {/* LIVE CARD PREVIEW */}
-              <div className="p-4 bg-slate-950 rounded-2xl border border-pink-500/30 space-y-3">
+              {/* LIVE CARD PREVIEW (FRONT & BACK) */}
+              <div className="p-4 bg-slate-950 rounded-2xl border border-pink-500/30 space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="font-extrabold text-white text-xs flex items-center gap-1.5">
                     <Eye className="w-4 h-4 text-cyan-400" />
-                    <span>Pratinjau Langsung Kartu Anggota (Live Preview)</span>
+                    <span>Pratinjau Langsung Kartu Anggota (Depan & Belakang)</span>
                   </h4>
-                  <span className="text-[10px] text-slate-400 font-mono">Standar ID Card (85.6 × 54mm)</span>
+                  <span className="text-[10px] text-slate-400 font-mono">Standar ID Card ID-1 (85.6 × 54mm)</span>
                 </div>
 
-                {/* Card Mockup */}
-                <div
-                  className="w-full max-w-[420px] aspect-[85.6/53.98] mx-auto rounded-2xl p-4 flex flex-col justify-between shadow-2xl relative overflow-hidden transition-all duration-300"
-                  style={{
-                    background: `linear-gradient(135deg, ${currentKTA.bgGradientFrom}, ${currentKTA.bgGradientVia || currentKTA.bgGradientFrom}, ${currentKTA.bgGradientTo})`,
-                    borderColor: currentKTA.borderColor,
-                    borderWidth: '2px',
-                  }}
-                >
-                  {/* Decorative Watermark */}
-                  {currentKTA.showWatermark && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* FRONT CARD MOCKUP */}
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-bold text-pink-400 uppercase tracking-wider">Tampak Depan</p>
                     <div
-                      className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                      style={{ opacity: currentKTA.watermarkOpacity }}
+                      className="w-full aspect-[85.6/53.98] rounded-2xl p-3.5 flex flex-col justify-between shadow-2xl relative overflow-hidden transition-all duration-300"
+                      style={{
+                        background: `linear-gradient(135deg, ${currentKTA.bgGradientFrom}, ${currentKTA.bgGradientVia || currentKTA.bgGradientFrom}, ${currentKTA.bgGradientTo})`,
+                        borderColor: currentKTA.borderColor,
+                        borderWidth: '2px',
+                      }}
                     >
-                      <div className="w-40 h-40 rounded-full border-8 border-white/40 flex items-center justify-center">
-                        <div className="w-28 h-28 rounded-full border-8 border-white/40 flex items-center justify-center">
-                          <div className="w-16 h-16 rounded-full bg-white/30" />
+                      {/* Decorative Watermark */}
+                      {currentKTA.showWatermark && (
+                        <div
+                          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                          style={{ opacity: currentKTA.watermarkOpacity }}
+                        >
+                          <div className="w-32 h-32 rounded-full border-8 border-white/40 flex items-center justify-center">
+                            <div className="w-20 h-20 rounded-full border-8 border-white/40 flex items-center justify-center">
+                              <div className="w-10 h-10 rounded-full bg-white/30" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Top Bar */}
+                      <div className="relative z-10 flex items-center justify-between border-b border-white/20 pb-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <img src={formData.logoUrl} alt="Logo" className="w-6 h-6 rounded-full bg-white/20 object-contain p-0.5" />
+                          <div>
+                            <p className="text-[8.5px] font-black uppercase tracking-tight leading-none" style={{ color: currentKTA.headerColor }}>
+                              {formData.clubName}
+                            </p>
+                            <p className="text-[7px] font-semibold text-slate-300">{currentKTA.cardTitle}</p>
+                          </div>
+                        </div>
+                        <span
+                          className="px-1.5 py-0.5 rounded-full text-[7.5px] font-black uppercase shadow-xs"
+                          style={{ backgroundColor: currentKTA.badgeBgColor, color: currentKTA.badgeTextColor }}
+                        >
+                          RECURVE
+                        </span>
+                      </div>
+
+                      {/* Body Info */}
+                      <div className="relative z-10 grid grid-cols-12 gap-2 items-center my-auto">
+                        <div className="col-span-4 flex flex-col items-center">
+                          <div
+                            className="w-14 h-16 rounded-lg overflow-hidden border-2 shadow-md bg-slate-800"
+                            style={{ borderColor: currentKTA.photoBorderColor }}
+                          >
+                            <img
+                              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120"
+                              alt="Athlete Preview"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <span className="text-[7.5px] font-mono font-black mt-0.5" style={{ color: currentKTA.memberIdColor }}>
+                            SM-BATU-001
+                          </span>
+                        </div>
+
+                        <div className="col-span-8 space-y-0.5 text-left">
+                          <div>
+                            <span className="text-[6.5px] font-bold uppercase tracking-wider block" style={{ color: currentKTA.labelColor }}>
+                              Nama Anggota
+                            </span>
+                            <h4 className="text-[11px] font-black tracking-tight leading-tight" style={{ color: currentKTA.nameColor }}>
+                              Muhammad Farhan Al-Fatih
+                            </h4>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-1 text-[7.5px]">
+                            <div>
+                              <span className="text-[6px] font-semibold uppercase block" style={{ color: currentKTA.labelColor }}>
+                                Divisi / Usia
+                              </span>
+                              <span className="font-bold truncate block" style={{ color: currentKTA.valueColor }}>
+                                Recurve (U-18)
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[6px] font-semibold uppercase block" style={{ color: currentKTA.labelColor }}>
+                                Tempat Lahir
+                              </span>
+                              <span className="font-bold truncate block" style={{ color: currentKTA.valueColor }}>
+                                Kota Batu
+                              </span>
+                            </div>
+                          </div>
+
+                          <p className="text-[6px] text-pink-200/90 italic truncate pt-0.5">
+                            "{currentKTA.disclaimerText || 'Anggota Resmi Seneng Manah, Segala penyalahgunaan KTA adalah tanggung jawab pemegang.'}"
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Card Bottom */}
+                      <div className="relative z-10 flex items-center justify-between border-t border-white/20 pt-1 text-[6.5px] text-slate-300">
+                        <span className="truncate max-w-[200px]">{currentKTA.footerText}</span>
+                        <span className="font-mono font-bold" style={{ color: currentKTA.barcodeBorderColor }}>
+                          VALID RESMI
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* BACK CARD MOCKUP */}
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Tampak Belakang & Ketentuan</p>
+                    <div className="w-full aspect-[85.6/53.98] rounded-2xl p-3.5 flex flex-col justify-between shadow-2xl relative overflow-hidden bg-white text-slate-900 border border-slate-700">
+                      {/* Back Top */}
+                      <div className="flex items-center justify-between border-b-2 border-slate-800 pb-1">
+                        <div className="flex items-center space-x-1.5">
+                          <img src={formData.logoUrl} alt="Logo" className="w-5 h-5 object-contain" />
+                          <div>
+                            <p className="text-[8px] font-black uppercase text-slate-900 leading-none font-mono">
+                              {formData.clubName}
+                            </p>
+                            <p className="text-[6px] text-pink-700 font-bold uppercase">
+                              {currentKTA.backSubtitle || 'KETENTUAN KARTU TANDA ANGGOTA'}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-[6.5px] font-mono font-bold text-slate-500">QR VERIFIED</span>
+                      </div>
+
+                      {/* Back Middle Grid */}
+                      <div className="grid grid-cols-12 gap-2 my-auto items-center">
+                        <div className="col-span-8 space-y-0.5 text-[6.5px] leading-tight text-slate-700">
+                          <p className="font-bold text-slate-950">Tata Tertib & Ketentuan:</p>
+                          <ol className="list-decimal list-inside space-y-0.5 text-slate-600">
+                            {(currentKTA.regulations || DEFAULT_KTA_SETTINGS.regulations || []).slice(0, 4).map((r, i) => (
+                              <li key={i} className="truncate">{r}</li>
+                            ))}
+                          </ol>
+                          <p className="text-[6px] text-slate-500 font-semibold truncate pt-0.5">
+                            📍 {currentKTA.backLocationText || formData.trainingLocation || 'Kota Batu, Jawa Timur'}
+                          </p>
+                        </div>
+
+                        <div className="col-span-4 flex flex-col items-center justify-center p-1 rounded-lg bg-slate-50 border border-slate-200">
+                          <div className="w-10 h-10 bg-slate-900 rounded p-0.5 flex items-center justify-center text-white text-[7px] font-bold">
+                            QR CODE
+                          </div>
+                          <span className="text-[5.5px] font-mono text-slate-600 font-bold mt-0.5">VERIFIKASI</span>
+                        </div>
+                      </div>
+
+                      {/* Back Bottom */}
+                      <div className="flex items-end justify-between border-t border-slate-200 pt-1 text-[6.5px] text-slate-500">
+                        <div>
+                          <p className="text-[5.5px] text-slate-400">WhatsApp:</p>
+                          <p className="font-bold text-slate-800 text-[6.5px]">{currentKTA.backContactText || formData.phone || '0812-3344-5566'}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[5.5px] text-slate-500">{currentKTA.backCoachTitle || 'Pelatih Kepala / Penanggung Jawab'}</p>
+                          <p className="font-bold text-slate-900 text-[7px] underline font-mono">
+                            {currentKTA.backCoachName || formData.headCoach || formData.coachName || 'Coach Zoulkifli'}
+                          </p>
                         </div>
                       </div>
                     </div>
-                  )}
-
-                  {/* Top Bar */}
-                  <div className="relative z-10 flex items-center justify-between border-b border-white/20 pb-2">
-                    <div className="flex items-center gap-2">
-                      <img src={formData.logoUrl} alt="Logo" className="w-7 h-7 rounded-full bg-white/20 object-contain p-0.5" />
-                      <div>
-                        <p className="text-[9px] font-black uppercase tracking-tight leading-none" style={{ color: currentKTA.headerColor }}>
-                          {formData.clubName}
-                        </p>
-                        <p className="text-[7.5px] font-semibold text-slate-300">{currentKTA.cardTitle}</p>
-                      </div>
-                    </div>
-                    <span
-                      className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase shadow-xs"
-                      style={{ backgroundColor: currentKTA.badgeBgColor, color: currentKTA.badgeTextColor }}
-                    >
-                      RECURVE
-                    </span>
                   </div>
+                </div>
+              </div>
 
-                  {/* Body Info */}
-                  <div className="relative z-10 grid grid-cols-12 gap-3 items-center my-auto">
-                    <div className="col-span-4 flex flex-col items-center">
-                      <div
-                        className="w-16 h-20 rounded-lg overflow-hidden border-2 shadow-md bg-slate-800"
-                        style={{ borderColor: currentKTA.photoBorderColor }}
-                      >
-                        <img
-                          src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120"
-                          alt="Athlete Preview"
-                          className="w-full h-full object-cover"
+              {/* TEKS & KONTEN KTA (DEPAN & BELAKANG) */}
+              <div className="p-4 bg-slate-950/60 rounded-xl border border-slate-800 space-y-4">
+                <h4 className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-pink-400" />
+                  <span>Pengaturan Teks Depan & Belakang, Pelatih & Pernyataan Resmi</span>
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Judul Kartu Depan</label>
+                    <input
+                      type="text"
+                      value={currentKTA.cardTitle || ''}
+                      onChange={(e) => updateKTAField('cardTitle', e.target.value)}
+                      placeholder="KARTU TANDA ANGGOTA RESMI"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white font-bold focus:outline-none focus:border-pink-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Teks Footer Depan</label>
+                    <input
+                      type="text"
+                      value={currentKTA.footerText || ''}
+                      onChange={(e) => updateKTAField('footerText', e.target.value)}
+                      placeholder="Kartu Tanda Anggota Resmi • Club Seneng Manah Batu"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-pink-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">
+                    Pernyataan Resmi / Disclaimer Tanggung Jawab *
+                  </label>
+                  <input
+                    type="text"
+                    value={currentKTA.disclaimerText || ''}
+                    onChange={(e) => updateKTAField('disclaimerText', e.target.value)}
+                    placeholder="Anggota Resmi Seneng Manah, Segala penyalahgunaan KTA adalah tanggung jawab pemegang."
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-pink-300 font-medium focus:outline-none focus:border-pink-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Sub-Judul Belakang KTA</label>
+                    <input
+                      type="text"
+                      value={currentKTA.backSubtitle || ''}
+                      onChange={(e) => updateKTAField('backSubtitle', e.target.value)}
+                      placeholder="KETENTUAN KARTU TANDA ANGGOTA"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Nama Pelatih Kepala / Penanggung Jawab KTA</label>
+                    <input
+                      type="text"
+                      value={currentKTA.backCoachName || ''}
+                      onChange={(e) => updateKTAField('backCoachName', e.target.value)}
+                      placeholder="Coach Zoulkifli"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 font-bold font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Jabatan Penanggung Jawab</label>
+                    <input
+                      type="text"
+                      value={currentKTA.backCoachTitle || ''}
+                      onChange={(e) => updateKTAField('backCoachTitle', e.target.value)}
+                      placeholder="Pelatih Kepala / Pengurus"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Kontak WhatsApp Sekretariat</label>
+                    <input
+                      type="text"
+                      value={currentKTA.backContactText || ''}
+                      onChange={(e) => updateKTAField('backContactText', e.target.value)}
+                      placeholder="0812-3344-5566"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-300 mb-1">Lokasi Latihan / Alamat</label>
+                  <input
+                    type="text"
+                    value={currentKTA.backLocationText || ''}
+                    onChange={(e) => updateKTAField('backLocationText', e.target.value)}
+                    placeholder="Lapangan Panahan Seneng Manah Archery Field, Kota Batu"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                {/* Peraturan KTA */}
+                <div className="space-y-2 pt-2">
+                  <label className="block font-bold text-amber-300 text-xs">Poin Tata Tertib & Peraturan KTA Belakang:</label>
+                  {[0, 1, 2, 3, 4].map((idx) => {
+                    const currentRegs = currentKTA.regulations || DEFAULT_KTA_SETTINGS.regulations || [];
+                    return (
+                      <div key={idx} className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 flex items-center justify-center font-mono font-bold text-[10px] shrink-0">
+                          {idx + 1}
+                        </span>
+                        <input
+                          type="text"
+                          value={currentRegs[idx] || ''}
+                          onChange={(e) => {
+                            const updatedRegs = [...currentRegs];
+                            updatedRegs[idx] = e.target.value;
+                            updateKTAField('regulations', updatedRegs);
+                          }}
+                          placeholder={`Poin Peraturan ${idx + 1}`}
+                          className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
                         />
                       </div>
-                      <span className="text-[8px] font-mono font-black mt-1" style={{ color: currentKTA.memberIdColor }}>
-                        SM-BATU-001
-                      </span>
-                    </div>
-
-                    <div className="col-span-8 space-y-1 text-left">
-                      <div>
-                        <span className="text-[7px] font-bold uppercase tracking-wider block" style={{ color: currentKTA.labelColor }}>
-                          Nama Atlet
-                        </span>
-                        <h4 className="text-xs font-black tracking-tight leading-tight" style={{ color: currentKTA.nameColor }}>
-                          Muhammad Farhan Al-Fatih
-                        </h4>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-1.5 text-[8px]">
-                        <div>
-                          <span className="text-[6.5px] font-semibold uppercase block" style={{ color: currentKTA.labelColor }}>
-                            Kategori
-                          </span>
-                          <span className="font-bold" style={{ color: currentKTA.valueColor }}>
-                            U-18 (Putra)
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[6.5px] font-semibold uppercase block" style={{ color: currentKTA.labelColor }}>
-                            Tempat Lahir
-                          </span>
-                          <span className="font-bold" style={{ color: currentKTA.valueColor }}>
-                            Kota Batu
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card Bottom */}
-                  <div className="relative z-10 flex items-center justify-between border-t border-white/20 pt-1 text-[7px] text-slate-300">
-                    <span className="truncate max-w-[260px]">{currentKTA.footerText}</span>
-                    <span className="font-mono font-bold" style={{ color: currentKTA.barcodeBorderColor }}>
-                      VERIFIED
-                    </span>
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
 

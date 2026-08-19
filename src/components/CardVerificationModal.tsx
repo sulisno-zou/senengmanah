@@ -136,17 +136,32 @@ export const CardVerificationModal: React.FC<CardVerificationModalProps> = ({
           <div className="p-6 overflow-y-auto space-y-5 flex-1 bg-gradient-to-b from-slate-900 to-slate-950">
             {/* Status Verification Badge */}
             {isApproved ? (
-              <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/20 to-blue-500/10 border border-emerald-500/30 flex items-center gap-3.5 animate-fadeIn">
-                <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-emerald-500/30">
-                  <CheckCircle2 className="w-6 h-6" />
+              <div className="space-y-3 animate-fadeIn">
+                <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-500/15 via-emerald-500/25 to-blue-500/15 border border-emerald-500/40 flex items-center gap-3.5 shadow-lg shadow-emerald-950/30">
+                  <div className="w-11 h-11 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shrink-0 shadow-lg shadow-emerald-500/40">
+                    <CheckCircle2 className="w-7 h-7" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-emerald-300 uppercase tracking-wider">
+                      TERVERIFIKASI RESMI & AKTIF
+                    </h4>
+                    <p className="text-xs text-slate-200 font-medium">
+                      Nomor Anggota & KTA Digital Sah Terdaftar di {clubSettings.clubName}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-sm font-black text-emerald-400 uppercase tracking-wide">
-                    TERVERIFIKASI RESMI & AKTIF
-                  </h4>
-                  <p className="text-xs text-slate-300">
-                    KTA sah dan resmi terdaftar pada {clubSettings.clubName}.
-                  </p>
+
+                {/* Mandated Official Statement */}
+                <div className="p-3.5 rounded-xl bg-slate-950/80 border-2 border-emerald-500/50 text-xs text-emerald-200 flex items-start gap-2.5 shadow-inner">
+                  <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-black text-emerald-300 text-xs uppercase tracking-wide">
+                      Pernyataan Resmi Keanggotaan:
+                    </p>
+                    <p className="text-slate-100 font-bold text-[11.5px] mt-0.5 leading-relaxed">
+                      "Anggota Resmi Seneng Manah, Segala penyalahgunaan KTA adalah tanggung jawab pemegang."
+                    </p>
+                  </div>
                 </div>
               </div>
             ) : isPending ? (

@@ -453,23 +453,35 @@ export const AthletesView: React.FC<AthletesViewProps> = ({
                   )}
 
                   {/* Level Role Badge */}
-                  {athlete.userRole && athlete.userRole !== 'atlit' ? (
-                    <span
-                      className={`px-2 py-0.5 rounded-md font-bold text-[10px] uppercase border ${
-                        athlete.userRole === 'super_admin'
-                          ? 'bg-rose-50 text-rose-700 border-rose-200'
-                          : athlete.userRole === 'admin'
-                          ? 'bg-blue-50 text-blue-700 border-blue-200'
-                          : athlete.userRole === 'pelatih' || athlete.userRole === 'pelatih_utama'
-                          ? 'bg-amber-50 text-amber-700 border-amber-200'
-                          : 'bg-cyan-50 text-cyan-700 border-cyan-200'
-                      }`}
-                    >
-                      Level: {athlete.userRole === 'super_admin' ? 'Super Admin' : athlete.userRole === 'admin' ? 'Admin' : athlete.userRole === 'pelatih_atlit' ? 'Pelatih / Atlit' : 'Pelatih'}
-                    </span>
-                  ) : (
-                    <span className="px-2 py-0.5 rounded-md font-bold text-[10px] uppercase bg-slate-100 text-slate-700 border border-slate-200">
-                      Level: Atlit
+                  <span
+                    className={`px-2 py-0.5 rounded-md font-bold text-[10px] uppercase border ${
+                      athlete.memberLevel === 'Pelatih Utama' || athlete.userRole === 'pelatih_utama'
+                        ? 'bg-amber-100 text-amber-900 border-amber-300'
+                        : athlete.memberLevel === 'Pelatih' || athlete.userRole === 'pelatih'
+                        ? 'bg-orange-50 text-orange-800 border-orange-200'
+                        : athlete.memberLevel === 'Pengurus' || athlete.userRole === 'pengurus'
+                        ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                        : athlete.memberLevel === 'Atlet Prestasi'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : athlete.userRole === 'super_admin'
+                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                        : athlete.userRole === 'admin'
+                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                        : 'bg-slate-100 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    Level: {athlete.memberLevel || (athlete.userRole === 'super_admin' ? 'Super Admin' : athlete.userRole === 'admin' ? 'Admin' : 'Atlet Reguler')}
+                  </span>
+
+                  {(athlete.memberLevel === 'Pelatih Utama' ||
+                    athlete.memberLevel === 'Pelatih' ||
+                    athlete.memberLevel === 'Pengurus' ||
+                    athlete.userRole === 'pelatih' ||
+                    athlete.userRole === 'pelatih_utama' ||
+                    athlete.userRole === 'admin' ||
+                    athlete.userRole === 'pengurus') && (
+                    <span className="px-2 py-0.5 rounded-md font-extrabold text-[9.5px] uppercase bg-purple-100 text-purple-800 border border-purple-200">
+                      ★ Bebas SPP
                     </span>
                   )}
 
@@ -1031,14 +1043,37 @@ export const AthletesView: React.FC<AthletesViewProps> = ({
                 <div className="flex items-center justify-between">
                   <h4 className="font-bold text-pink-400 uppercase tracking-wider text-xs flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-pink-400" />
-                    <span>Level Akses Anggota & Kredensial Login</span>
+                    <span>Level Keanggotaan & Hak Akses Akun</span>
                   </h4>
-                  <span className="text-[10px] text-slate-400">Multi-User RBAC Cloud</span>
+                  <span className="text-[10px] text-slate-400">Multi-Role RBAC</span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
-                    <label className="block font-bold text-slate-300 mb-1">Level / Hak Akses *</label>
+                    <label className="block font-bold text-slate-300 mb-1">Level Anggota *</label>
+                    <select
+                      value={formData.memberLevel || 'Atlet Reguler'}
+                      onChange={(e) => {
+                        const lvl = e.target.value as any;
+                        let role = formData.userRole || 'atlit';
+                        if (lvl === 'Pelatih Utama') role = 'pelatih_utama';
+                        else if (lvl === 'Pelatih') role = 'pelatih';
+                        else if (lvl === 'Pengurus') role = 'pengurus';
+                        setFormData({ ...formData, memberLevel: lvl, userRole: role });
+                      }}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-pink-500 font-bold"
+                    >
+                      <option value="Pelatih Utama">👑 Pelatih Utama (Head Coach)</option>
+                      <option value="Pelatih">🏹 Pelatih</option>
+                      <option value="Pengurus">💼 Pengurus Klub</option>
+                      <option value="Atlet Reguler">🎯 Atlet Reguler</option>
+                      <option value="Atlet Prestasi">🏆 Atlet Prestasi</option>
+                      <option value="Calon Atlet">🌱 Calon Atlet</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-300 mb-1">Hak Akses Sistem (Role) *</label>
                     <select
                       value={formData.userRole || 'atlit'}
                       onChange={(e) => setFormData({ ...formData, userRole: e.target.value as any })}
@@ -1046,9 +1081,11 @@ export const AthletesView: React.FC<AthletesViewProps> = ({
                     >
                       <option value="super_admin">1. Super Admin</option>
                       <option value="admin">2. Admin</option>
-                      <option value="pelatih">3. Pelatih</option>
-                      <option value="pelatih_atlit">4. Pelatih / Atlit</option>
-                      <option value="atlit">5. Atlit</option>
+                      <option value="pelatih_utama">3. Pelatih Utama (Bisa Semua Kecuali Ganti Password Super Admin)</option>
+                      <option value="pelatih">4. Pelatih</option>
+                      <option value="pelatih_atlit">5. Pelatih / Atlet</option>
+                      <option value="pengurus">6. Pengurus</option>
+                      <option value="atlit">7. Atlet</option>
                     </select>
                   </div>
 

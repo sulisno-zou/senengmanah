@@ -67,6 +67,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
     pelatih_utama: { bg: 'bg-purple-500/20 border-purple-500/40 text-purple-300', text: 'text-purple-400', label: 'PELATIH UTAMA' },
     pelatih: { bg: 'bg-blue-500/20 border-blue-500/40 text-blue-300', text: 'text-blue-400', label: 'PELATIH' },
     pelatih_atlit: { bg: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300', text: 'text-emerald-400', label: 'PELATIH & ATLIT' },
+    pengurus: { bg: 'bg-teal-500/20 border-teal-500/40 text-teal-300', text: 'text-teal-400', label: 'PENGURUS' },
     atlit: { bg: 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300', text: 'text-cyan-400', label: 'ATLIT' },
   };
 
@@ -74,8 +75,10 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
 
   // Filter accessible tabs according to role
   const isSuperAdmin = currentUser.role === 'super_admin';
-  const isAdmin = currentUser.role === 'admin' || isSuperAdmin;
-  const isCoach = currentUser.role === 'pelatih_utama' || currentUser.role === 'pelatih' || currentUser.role === 'pelatih_atlit';
+  const isHeadCoach = currentUser.role === 'pelatih_utama';
+  const isAdmin = currentUser.role === 'admin' || isSuperAdmin || isHeadCoach;
+  const isPengurus = currentUser.role === 'pengurus';
+  const isCoach = currentUser.role === 'pelatih_utama' || currentUser.role === 'pelatih' || currentUser.role === 'pelatih_atlit' || currentUser.role === 'admin';
   const isAthlete = currentUser.role === 'atlit';
 
   const menuItems: {
@@ -347,7 +350,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
             )}
           </button>
 
-          {isSuperAdmin && (
+          {(isSuperAdmin || isHeadCoach) && (
             <button
               onClick={() => {
                 onOpenSettings();
@@ -366,8 +369,8 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
 
         {/* Sidebar Footer */}
         <div className="p-3 border-t border-slate-800/80 shrink-0 text-center bg-slate-950">
-          <p className="text-[10px] text-slate-500 font-medium">
-            Seneng Manah v2.4 • Kota Batu
+          <p className="text-[10px] text-slate-400 font-mono">
+            © {new Date().getFullYear()} <span className="text-pink-400 font-bold">@zou-manahlead2026</span>
           </p>
         </div>
       </aside>

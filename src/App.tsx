@@ -217,25 +217,9 @@ export default function App() {
     }
   };
 
-  // Firebase Cloud Real-Time Subscriptions (Multi-User & Multi-Device Sync - Zero LocalStorage)
+  // Firebase Cloud Real-Time Subscriptions (Multi-User & Multi-Device Sync - Fast & Stable)
   useEffect(() => {
-    // 1. One-time Cloud Clean Purge check
-    const isCloudCleaned = sessionStorage.getItem('sm_cloud_purged_flag_v2');
-    if (!isCloudCleaned) {
-      sessionStorage.setItem('sm_cloud_purged_flag_v2', 'true');
-      clearAllAthletesAndRegistrationsCloudData()
-        .then(() => {
-          setAthletes([]);
-          setRegistrations([]);
-          setSppPayments([]);
-          setTrainingSessions([]);
-          setAttendanceRecords([]);
-          setPaymentProofs([]);
-        })
-        .catch((e) => console.warn('Purge initial cloud error:', e));
-    }
-
-    // 2. Auto-seed if cloud database is fresh
+    // 1. Auto-seed if cloud database is fresh
     seedInitialCloudDataIfEmpty({
       athletes: INITIAL_ATHLETES,
       sppPayments: INITIAL_SPP_PAYMENTS,
@@ -247,58 +231,64 @@ export default function App() {
       users: INITIAL_USERS,
     });
 
-    // 3. Real-time Athletes listener
+    // 2. Real-time Athletes listener
     const unsubAthletes = subscribeToCollection<Athlete>(COLLECTIONS.ATHLETES, (cloudAthletes) => {
-      if (cloudAthletes) {
-        const cleanAthletes = cloudAthletes.filter((a) => !a.id.match(/^ath-[1-6]$/));
-        setAthletes(cleanAthletes);
+      if (cloudAthletes && cloudAthletes.length > 0) {
+        setAthletes(cloudAthletes);
+      } else {
+        setAthletes((prev) => (prev.length > 0 ? prev : INITIAL_ATHLETES));
       }
     });
 
-    // 4. Real-time SPP Payments listener
+    // 3. Real-time SPP Payments listener
     const unsubSPP = subscribeToCollection<SPPPayment>(COLLECTIONS.SPP_PAYMENTS, (cloudPayments) => {
-      if (cloudPayments) {
+      if (cloudPayments && cloudPayments.length > 0) {
         setSppPayments(cloudPayments);
+      } else {
+        setSppPayments((prev) => (prev.length > 0 ? prev : INITIAL_SPP_PAYMENTS));
       }
     });
 
-    // 5. Real-time Training Sessions listener
+    // 4. Real-time Training Sessions listener
     const unsubTraining = subscribeToCollection<TrainingSession>(COLLECTIONS.TRAINING_SESSIONS, (cloudSessions) => {
-      if (cloudSessions) {
+      if (cloudSessions && cloudSessions.length > 0) {
         setTrainingSessions(cloudSessions);
+      } else {
+        setTrainingSessions((prev) => (prev.length > 0 ? prev : INITIAL_TRAINING_SESSIONS));
       }
     });
 
-    // 6. Real-time Attendance listener
+    // 5. Real-time Attendance listener
     const unsubAttendance = subscribeToCollection<AttendanceRecord>(COLLECTIONS.ATTENDANCE, (cloudAttendance) => {
-      if (cloudAttendance) {
+      if (cloudAttendance && cloudAttendance.length > 0) {
         setAttendanceRecords(cloudAttendance);
+      } else {
+        setAttendanceRecords((prev) => (prev.length > 0 ? prev : INITIAL_ATTENDANCE));
       }
     });
 
-    // 7. Real-time News listener
+    // 6. Real-time News listener
     const unsubNews = subscribeToCollection<NewsArticle>(COLLECTIONS.NEWS, (cloudNews) => {
       if (cloudNews && cloudNews.length > 0) {
         setNewsList(cloudNews);
       }
     });
 
-    // 8. Real-time Online Registrations listener (incoming from remote HP / mobile)
+    // 7. Real-time Online Registrations listener (incoming from remote HP / mobile)
     let isInitialRegsSync = true;
     const unsubRegs = subscribeToCollection<RegistrationRequest>(COLLECTIONS.REGISTRATIONS, (cloudRegs) => {
       if (cloudRegs) {
-        const cleanRegs = cloudRegs.filter((r) => !r.id.match(/^reg-[1-4]$/));
         setRegistrations((prevRegs) => {
           if (!isInitialRegsSync) {
             const prevIds = new Set(prevRegs.map((r) => r.id));
-            const newIncoming = cleanRegs.filter((r) => !prevIds.has(r.id) && r.status === 'MENUNGGU_VERIFIKASI');
+            const newIncoming = cloudRegs.filter((r) => !prevIds.has(r.id) && r.status === 'MENUNGGU_VERIFIKASI');
             if (newIncoming.length > 0) {
               playNewRegistrationAlertSound();
               setNewRegistrantToast(newIncoming[0]);
             }
           }
           isInitialRegsSync = false;
-          return cleanRegs;
+          return cloudRegs;
         });
       }
     });
@@ -731,6 +721,61 @@ export default function App() {
       return [evaluation, ...prev];
     });
     syncSaveDoc(COLLECTIONS.ATHLETE_EVALUATIONS, evaluation);
+  };
+
+  // KTA Status Handlers
+  const handleApproveKTA = (athleteId: string, notes?: string) => {
+    const target = athletes.find((a) => a.id === athleteId);
+    if (target) {
+      const updated: Athlete = {
+        ...target,
+        ktaStatus: 'APPROVED',
+        active: true,
+        ktaApprovedAt: new Date().toISOString(),
+        ktaApprovedBy: currentUser.name,
+      };
+      handleUpdateAthlete(updated);
+    }
+  };
+
+  const handleRejectKTA = (athleteId: string, reason?: string) => {
+    const target = athletes.find((a) => a.id === athleteId);
+    if (target) {
+      const updated: Athlete = {
+        ...target,
+        ktaStatus: 'REJECTED',
+        leaveReason: reason,
+      };
+      handleUpdateAthlete(updated);
+    }
+  };
+
+  const handleDeactivateKTA = (athleteId: string, reason?: string) => {
+    const target = athletes.find((a) => a.id === athleteId);
+    if (target) {
+      const updated: Athlete = {
+        ...target,
+        ktaStatus: 'NONAKTIF',
+        active: false,
+        leaveDate: new Date().toISOString().slice(0, 10),
+        leaveReason: reason || 'Anggota Keluar / Nonaktif',
+      };
+      handleUpdateAthlete(updated);
+    }
+  };
+
+  const handleReactivateKTA = (athleteId: string) => {
+    const target = athletes.find((a) => a.id === athleteId);
+    if (target) {
+      const updated: Athlete = {
+        ...target,
+        ktaStatus: 'APPROVED',
+        active: true,
+        leaveDate: undefined,
+        leaveReason: undefined,
+      };
+      handleUpdateAthlete(updated);
+    }
   };
 
   // Switch role handler
@@ -1215,6 +1260,15 @@ export default function App() {
           onOpenVerification={() => {
             setCardAthlete(null);
             setIsScanKTAModalOpen(true);
+          }}
+          onApproveKTA={handleApproveKTA}
+          onRejectKTA={handleRejectKTA}
+          onDeactivateKTA={handleDeactivateKTA}
+          onReactivateKTA={handleReactivateKTA}
+          onSaveKTASettings={(updatedSettings) => {
+            const newClubSettings = { ...clubSettings, ktaSettings: updatedSettings };
+            setClubSettings(newClubSettings);
+            syncSaveDoc(COLLECTIONS.SETTINGS, newClubSettings, 'global_settings');
           }}
         />
       )}

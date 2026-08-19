@@ -31,6 +31,7 @@ export const COLLECTIONS = {
   USERS: 'userAccounts',
   CASHFLOW: 'cashflowTransactions',
   ATHLETE_EVALUATIONS: 'athleteEvaluations',
+  PROFILE_UPDATES: 'profileUpdateRequests',
 };
 
 // Generic subscribe to a collection
@@ -119,7 +120,7 @@ export async function syncDeleteDoc(collectionName: string, id: string) {
   }
 }
 
-// Seed initial cloud data (Settings and Super Admin only)
+// Seed initial cloud data safely if collections are completely empty
 export async function seedInitialCloudDataIfEmpty(initialData: {
   athletes: Athlete[];
   sppPayments: SPPPayment[];
@@ -131,16 +132,16 @@ export async function seedInitialCloudDataIfEmpty(initialData: {
   users: UserAccount[];
 }) {
   try {
-    // Seed Settings if not exists
+    // 1. Seed Settings if not exists
     const settingsRef = doc(db, COLLECTIONS.SETTINGS, 'global_settings');
     const settingsSnap = await getDocs(collection(db, COLLECTIONS.SETTINGS));
     if (settingsSnap.empty) {
       await setDoc(settingsRef, initialData.clubSettings, { merge: true });
     }
 
-    // Seed News if not exists
+    // 2. Seed News if not exists
     const newsSnap = await getDocs(collection(db, COLLECTIONS.NEWS));
-    if (newsSnap.empty && initialData.news.length > 0) {
+    if (newsSnap.empty && initialData.news && initialData.news.length > 0) {
       const batch = writeBatch(db);
       initialData.news.forEach((n) => {
         const ref = doc(db, COLLECTIONS.NEWS, n.id);
@@ -149,13 +150,68 @@ export async function seedInitialCloudDataIfEmpty(initialData: {
       await batch.commit();
     }
 
-    // Seed Super Admin if not exists
+    // 3. Seed Users if not exists
     const usersSnap = await getDocs(collection(db, COLLECTIONS.USERS));
-    if (usersSnap.empty && initialData.users.length > 0) {
+    if (usersSnap.empty && initialData.users && initialData.users.length > 0) {
       const batch = writeBatch(db);
       initialData.users.forEach((u) => {
         const ref = doc(db, COLLECTIONS.USERS, u.id);
         batch.set(ref, u);
+      });
+      await batch.commit();
+    }
+
+    // 4. Seed Athletes if not exists
+    const athletesSnap = await getDocs(collection(db, COLLECTIONS.ATHLETES));
+    if (athletesSnap.empty && initialData.athletes && initialData.athletes.length > 0) {
+      const batch = writeBatch(db);
+      initialData.athletes.forEach((ath) => {
+        const ref = doc(db, COLLECTIONS.ATHLETES, ath.id);
+        batch.set(ref, ath);
+      });
+      await batch.commit();
+    }
+
+    // 5. Seed SPP Payments if not exists
+    const sppSnap = await getDocs(collection(db, COLLECTIONS.SPP_PAYMENTS));
+    if (sppSnap.empty && initialData.sppPayments && initialData.sppPayments.length > 0) {
+      const batch = writeBatch(db);
+      initialData.sppPayments.forEach((p) => {
+        const ref = doc(db, COLLECTIONS.SPP_PAYMENTS, p.id);
+        batch.set(ref, p);
+      });
+      await batch.commit();
+    }
+
+    // 6. Seed Training Sessions if not exists
+    const trainingSnap = await getDocs(collection(db, COLLECTIONS.TRAINING_SESSIONS));
+    if (trainingSnap.empty && initialData.trainingSessions && initialData.trainingSessions.length > 0) {
+      const batch = writeBatch(db);
+      initialData.trainingSessions.forEach((t) => {
+        const ref = doc(db, COLLECTIONS.TRAINING_SESSIONS, t.id);
+        batch.set(ref, t);
+      });
+      await batch.commit();
+    }
+
+    // 7. Seed Attendance if not exists
+    const attendanceSnap = await getDocs(collection(db, COLLECTIONS.ATTENDANCE));
+    if (attendanceSnap.empty && initialData.attendanceRecords && initialData.attendanceRecords.length > 0) {
+      const batch = writeBatch(db);
+      initialData.attendanceRecords.forEach((a) => {
+        const ref = doc(db, COLLECTIONS.ATTENDANCE, a.id);
+        batch.set(ref, a);
+      });
+      await batch.commit();
+    }
+
+    // 8. Seed Registrations if not exists
+    const regsSnap = await getDocs(collection(db, COLLECTIONS.REGISTRATIONS));
+    if (regsSnap.empty && initialData.registrations && initialData.registrations.length > 0) {
+      const batch = writeBatch(db);
+      initialData.registrations.forEach((r) => {
+        const ref = doc(db, COLLECTIONS.REGISTRATIONS, r.id);
+        batch.set(ref, r);
       });
       await batch.commit();
     }

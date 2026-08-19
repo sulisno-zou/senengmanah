@@ -14,8 +14,10 @@ import {
   RefreshCw,
   Eye,
   Check,
+  FileText,
 } from 'lucide-react';
-import { Athlete, UserAccount, BowDivision, AgeCategory, Gender } from '../types';
+import * as XLSX from 'xlsx';
+import { Athlete, UserAccount, BowDivision, AgeCategory, Gender, MemberLevel } from '../types';
 import { formatDateIndo } from '../utils/formatters';
 
 interface AthleteImportExportModalProps {
@@ -43,7 +45,11 @@ export const AthleteImportExportModal: React.FC<AthleteImportExportModalProps> =
 
   if (!isOpen) return null;
 
-  const canAccess = currentUser.role === 'super_admin' || currentUser.role === 'admin';
+  const canAccess =
+    currentUser.role === 'super_admin' ||
+    currentUser.role === 'admin' ||
+    currentUser.role === 'pelatih_utama';
+
   if (!canAccess) {
     return (
       <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -51,7 +57,7 @@ export const AthleteImportExportModal: React.FC<AthleteImportExportModalProps> =
           <AlertCircle className="w-12 h-12 text-rose-500 mx-auto" />
           <h3 className="text-lg font-bold">Akses Dibatasi</h3>
           <p className="text-xs text-slate-400">
-            Fitur Impor & Ekspor data atlet hanya dapat diakses oleh Super Admin dan Admin Klub.
+            Fitur Impor & Ekspor data atlet hanya dapat diakses oleh Super Admin, Admin Klub, dan Pelatih Utama.
           </p>
           <button
             onClick={onClose}
@@ -65,74 +71,89 @@ export const AthleteImportExportModal: React.FC<AthleteImportExportModalProps> =
   }
 
   // ==========================================
-  // 1. EXPORT HANDLERS
+  // 1. EXPORT HANDLERS (EXCEL XLSX, CSV, JSON)
   // ==========================================
-  const escapeCsv = (val: any) => {
-    if (val === undefined || val === null) return '""';
-    const str = String(val).replace(/"/g, '""');
-    return `"${str}"`;
+  const prepareExportData = () => {
+    return athletes.map((a, idx) => ({
+      No: idx + 1,
+      'No Anggota (KTA)': a.memberNo || '',
+      'Nama Lengkap': a.name || '',
+      'Nama Panggilan': a.nickname || '',
+      'Level Anggota': a.memberLevel || 'Atlet Reguler',
+      'Jenis Kelamin (L/P)': a.gender || 'L',
+      NIK: a.nik ? String(a.nik) : '',
+      'Tempat Lahir': a.birthPlace || '',
+      'Tanggal Lahir (YYYY-MM-DD)': a.birthDate || '',
+      'Kategori Usia': a.ageCategory || 'U-15',
+      'Divisi Busur': a.division || 'Horsebow',
+      'No HP / WhatsApp': a.phone ? String(a.phone) : '',
+      'Nama Orang Tua / Wali': a.parentName || '',
+      'No HP Orang Tua': a.parentPhone ? String(a.parentPhone) : '',
+      'Alamat Lengkap': a.address || '',
+      'Tanggal Bergabung (YYYY-MM-DD)': a.joinDate || '',
+      'Status Aktif (Aktif/Nonaktif)': a.active ? 'Aktif' : 'Nonaktif',
+      'Model Busur': a.equipment?.bowType || 'Horsebow 48"',
+      'Draw Weight (lbs)': a.equipment?.drawWeightLbs || 35,
+      'Draw Length (inch)': a.equipment?.drawLengthInch || 28,
+      'Merk Arrow': a.equipment?.arrowBrand || 'Easton / Beman',
+      'Spine Arrow': a.equipment?.arrowSpine || 600,
+      'Thumb Ring': a.equipment?.thumbRingType || 'Ottoman Brass Ring',
+      'Gaya Khatra': a.equipment?.khatraStyle || 'Forward Khatra',
+      'Tipe Quiver': a.equipment?.quiverType || 'Hip Quiver',
+      'Username Akun': a.username || '',
+      'Catatan Tambahan': a.notes || '',
+    }));
+  };
+
+  const handleExportExcel = () => {
+    const data = prepareExportData();
+    const worksheet = XLSX.utils.json_to_sheet(data);
+
+    // Set column widths
+    const wscols = [
+      { wch: 5 }, // No
+      { wch: 18 }, // No Anggota
+      { wch: 25 }, // Nama Lengkap
+      { wch: 15 }, // Panggilan
+      { wch: 18 }, // Level
+      { wch: 10 }, // Gender
+      { wch: 20 }, // NIK
+      { wch: 18 }, // Tempat Lahir
+      { wch: 15 }, // Tgl Lahir
+      { wch: 15 }, // Kategori Usia
+      { wch: 18 }, // Divisi Busur
+      { wch: 18 }, // No HP
+      { wch: 22 }, // Orang Tua
+      { wch: 18 }, // HP Ortu
+      { wch: 30 }, // Alamat
+      { wch: 15 }, // Tgl Gabung
+      { wch: 12 }, // Status
+      { wch: 20 }, // Busur
+      { wch: 15 }, // Draw W
+      { wch: 15 }, // Draw L
+      { wch: 18 }, // Arrow
+      { wch: 12 }, // Spine
+      { wch: 20 }, // Thumb Ring
+      { wch: 18 }, // Khatra
+      { wch: 16 }, // Quiver
+      { wch: 16 }, // Username
+      { wch: 30 }, // Catatan
+    ];
+    worksheet['!cols'] = wscols;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Atlet & Anggota');
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `DATA_ATLIT_SENENG_MANAH_${todayStr}.xlsx`);
   };
 
   const handleExportCSV = () => {
-    const headers = [
-      'No',
-      'No Anggota (KTA)',
-      'Nama Lengkap',
-      'Nama Panggilan',
-      'Jenis Kelamin (L/P)',
-      'NIK',
-      'Tempat Lahir',
-      'Tanggal Lahir (YYYY-MM-DD)',
-      'Kategori Usia',
-      'Divisi Busur',
-      'No HP / WhatsApp',
-      'Nama Orang Tua / Wali',
-      'No HP Orang Tua',
-      'Alamat Lengkap',
-      'Tanggal Bergabung (YYYY-MM-DD)',
-      'Status Aktif (Aktif/Nonaktif)',
-      'Model Busur',
-      'Draw Weight (lbs)',
-      'Draw Length (inch)',
-      'Merk Arrow & Spine',
-      'Thumb Ring',
-      'Gaya Khatra',
-      'Tipe Quiver',
-      'Catatan Tambahan',
-    ];
+    const data = prepareExportData();
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const csvContent = XLSX.utils.sheet_to_csv(worksheet);
 
-    const rows = athletes.map((a, idx) => [
-      idx + 1,
-      a.memberNo || '',
-      a.name || '',
-      a.nickname || '',
-      a.gender || 'L',
-      `'${a.nik || ''}`,
-      a.birthPlace || '',
-      a.birthDate || '',
-      a.ageCategory || 'U-15',
-      a.division || 'Horsebow',
-      `'${a.phone || ''}`,
-      a.parentName || '',
-      `'${a.parentPhone || ''}`,
-      a.address || '',
-      a.joinDate || '',
-      a.active ? 'Aktif' : 'Nonaktif',
-      a.equipment?.bowType || 'Horsebow 48"',
-      a.equipment?.drawWeightLbs || 35,
-      a.equipment?.drawLengthInch || 28,
-      `${a.equipment?.arrowBrand || ''} (Spine ${a.equipment?.arrowSpine || '600'})`,
-      a.equipment?.thumbRingType || 'Ottoman Brass Ring',
-      a.equipment?.khatraStyle || 'Forward Khatra',
-      a.equipment?.quiverType || 'Hip Quiver',
-      a.notes || '',
-    ]);
-
-    const csvContent =
-      '\uFEFF' +
-      [headers.map(escapeCsv).join(','), ...rows.map((r) => r.map(escapeCsv).join(','))].join('\r\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -159,580 +180,581 @@ export const AthleteImportExportModal: React.FC<AthleteImportExportModalProps> =
   };
 
   const handleDownloadTemplate = () => {
-    const headers = [
-      'No Anggota (KTA)',
-      'Nama Lengkap',
-      'Nama Panggilan',
-      'Jenis Kelamin (L/P)',
-      'NIK',
-      'Tempat Lahir',
-      'Tanggal Lahir (YYYY-MM-DD)',
-      'Kategori Usia (U-10/U-12/U-15/U-18/Senior)',
-      'Divisi Busur (Horsebow)',
-      'No HP / WhatsApp',
-      'Nama Orang Tua',
-      'No HP Orang Tua',
-      'Alamat Lengkap',
-      'Tanggal Bergabung (YYYY-MM-DD)',
-      'Status Aktif (Aktif/Nonaktif)',
-      'Model Busur',
-      'Draw Weight (lbs)',
-      'Draw Length (inch)',
-      'Spine Arrow',
-      'Catatan',
+    const templateData = [
+      {
+        'No Anggota (KTA)': 'SM-BATU-001',
+        'Nama Lengkap': 'Farhan Arya Pratama',
+        'Nama Panggilan': 'Farhan',
+        'Level Anggota': 'Atlet Reguler',
+        'Jenis Kelamin (L/P)': 'L',
+        NIK: '3579012345670001',
+        'Tempat Lahir': 'Kota Batu',
+        'Tanggal Lahir (YYYY-MM-DD)': '2010-05-14',
+        'Kategori Usia': 'U-15',
+        'Divisi Busur': 'Horsebow',
+        'No HP / WhatsApp': '081234567891',
+        'Nama Orang Tua / Wali': 'Bambang Santoso',
+        'No HP Orang Tua': '081234567890',
+        'Alamat Lengkap': 'Jl. Bromo No. 12, Sisir, Kota Batu',
+        'Tanggal Bergabung (YYYY-MM-DD)': '2025-01-10',
+        'Status Aktif (Aktif/Nonaktif)': 'Aktif',
+        'Model Busur': 'Horsebow Ottoman 48"',
+        'Draw Weight (lbs)': 35,
+        'Draw Length (inch)': 28,
+        'Merk Arrow': 'Easton Inspire',
+        'Spine Arrow': 600,
+        'Thumb Ring': 'Brass Ottoman',
+        'Gaya Khatra': 'Forward Khatra',
+        'Tipe Quiver': 'Hip Quiver',
+        'Username Akun': 'farhan_batu',
+        'Catatan Tambahan': 'Atlet binaan potensi kejurda',
+      },
+      {
+        'No Anggota (KTA)': 'SM-BATU-002',
+        'Nama Lengkap': 'Aisyah Putri Maharani',
+        'Nama Panggilan': 'Aisyah',
+        'Level Anggota': 'Atlet Prestasi',
+        'Jenis Kelamin (L/P)': 'P',
+        NIK: '3579015566770002',
+        'Tempat Lahir': 'Malang',
+        'Tanggal Lahir (YYYY-MM-DD)': '2012-08-20',
+        'Kategori Usia': 'U-13',
+        'Divisi Busur': 'Standard Bow',
+        'No HP / WhatsApp': '081344556677',
+        'Nama Orang Tua / Wali': 'Hendra Wijaya',
+        'No HP Orang Tua': '081344556678',
+        'Alamat Lengkap': 'Jl. Panderman No. 5, Kota Batu',
+        'Tanggal Bergabung (YYYY-MM-DD)': '2025-03-01',
+        'Status Aktif (Aktif/Nonaktif)': 'Aktif',
+        'Model Busur': 'Cartel Sirius Plus 66"',
+        'Draw Weight (lbs)': 24,
+        'Draw Length (inch)': 25,
+        'Merk Arrow': 'Beman Flash',
+        'Spine Arrow': 900,
+        'Thumb Ring': '-',
+        'Gaya Khatra': '-',
+        'Tipe Quiver': 'Target Side Quiver',
+        'Username Akun': 'aisyah_archery',
+        'Catatan Tambahan': 'Kandidat Popda Jatim',
+      },
     ];
 
-    const sampleRow1 = [
-      'SM-BATU-901',
-      'Ahmad Syakir Pratama',
-      'Syakir',
-      'L',
-      '3579012304080001',
-      'Kota Batu',
-      '2009-04-12',
-      'U-15',
-      'Horsebow',
-      '081234567890',
-      'Budi Pratama',
-      '081298765432',
-      'Jl. Sultan Agung No. 12, Kota Batu',
-      '2026-01-10',
-      'Aktif',
-      'Ottoman Sipahi Bow 48"',
-      '35',
-      '28',
-      '600',
-      'Fokus latihan Fast Shooting & Dynamic',
-    ];
-
-    const sampleRow2 = [
-      'SM-BATU-902',
-      'Fatimah Azzahra',
-      'Zahra',
-      'P',
-      '3579016508100002',
-      'Kota Batu',
-      '2011-08-25',
-      'U-15',
-      'Horsebow',
-      '081345678901',
-      'Ahmad Faisal',
-      '081398765432',
-      'Jl. Panglima Sudirman No. 45, Kota Batu',
-      '2026-02-15',
-      'Aktif',
-      'Turkish Horsebow 50"',
-      '30',
-      '27',
-      '700',
-      'Persiapan Kejuaraan Daerah Horsebow',
-    ];
-
-    const csvContent =
-      '\uFEFF' +
-      [
-        headers.map(escapeCsv).join(','),
-        sampleRow1.map(escapeCsv).join(','),
-        sampleRow2.map(escapeCsv).join(','),
-      ].join('\r\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `TEMPLATE_IMPOR_ATLIT_SENENG_MANAH.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const worksheet = XLSX.utils.json_to_sheet(templateData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Template Import Atlet');
+    XLSX.writeFile(workbook, 'TEMPLATE_IMPORT_ATLIT_SENENG_MANAH.xlsx');
   };
 
   // ==========================================
-  // 2. IMPORT HANDLERS
+  // 2. IMPORT HANDLERS (XLSX, XLS, CSV, JSON)
   // ==========================================
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     setImportFile(file);
     setParseErrors([]);
     setSuccessMessage(null);
-    parseFile(file);
+    setParsedAthletes([]);
+
+    const fileName = file.name.toLowerCase();
+    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
+      parseExcelOrCSVFile(file);
+    } else if (fileName.endsWith('.json')) {
+      parseJSONFile(file);
+    } else {
+      setParseErrors(['Format file tidak didukung. Harap pilih file .xlsx, .xls, .csv, atau .json']);
+    }
   };
 
-  const parseFile = (file: File) => {
+  const parseExcelOrCSVFile = (file: File) => {
+    setIsProcessing(true);
     const reader = new FileReader();
-    reader.onload = (event) => {
+
+    reader.onload = (e) => {
       try {
-        const text = event.target?.result as string;
-        if (!text) throw new Error('Berkas kosong');
+        const buffer = e.target?.result;
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rawJson: any[] = XLSX.utils.sheet_to_json(worksheet);
 
-        if (file.name.endsWith('.json')) {
-          const json = JSON.parse(text);
-          if (!Array.isArray(json)) throw new Error('Format JSON harus berupa Array data atlet');
-          const validList: Athlete[] = json.map((item, idx) => ({
-            id: item.id || `ath-imported-${Date.now()}-${idx}`,
-            memberNo: item.memberNo || `SM-BATU-${String(athletes.length + idx + 1).padStart(3, '0')}`,
-            name: item.name || `Atlit ${idx + 1}`,
-            nickname: item.nickname || '',
-            gender: (item.gender === 'P' ? 'P' : 'L') as Gender,
-            nik: item.nik ? String(item.nik).replace(/'/g, '') : `357901${String(Date.now() + idx).slice(-10)}`,
-            birthPlace: item.birthPlace || 'Kota Batu',
-            birthDate: item.birthDate || '2010-01-01',
-            ageCategory: (item.ageCategory || 'U-15') as AgeCategory,
-            division: 'Horsebow',
-            phone: item.phone ? String(item.phone).replace(/'/g, '') : '',
-            parentName: item.parentName || '',
-            parentPhone: item.parentPhone ? String(item.parentPhone).replace(/'/g, '') : '',
-            address: item.address || 'Kota Batu',
-            joinDate: item.joinDate || new Date().toISOString().slice(0, 10),
-            active: item.active !== false,
-            photoUrl: item.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-            userRole: item.userRole || 'atlit',
-            username: item.username || (item.memberNo ? item.memberNo.toLowerCase().replace(/[^a-z0-9]/g, '') : `atlit_${idx + 1}`),
-            password: item.password || 'password123',
-            notes: item.notes || '',
-            equipment: item.equipment || {
-              bowBrand: 'Ottoman Turkish Bow',
-              bowType: 'Horsebow 48"',
-              drawWeightLbs: 35,
-              drawLengthInch: 28,
-              arrowBrand: 'Carbon Traditional Hybrid',
-              arrowSpine: '600',
-              sightMarkNotes: '',
-              thumbRingType: 'Ottoman Brass Ring',
-              khatraStyle: 'Forward Khatra',
-              quiverType: 'Hip Quiver',
-            },
-          }));
-          setParsedAthletes(validList);
-        } else {
-          // CSV Parser with support for quotes and comma/semicolon delimiter
-          const lines = text.split(/\r\n|\n|\r/).filter((l) => l.trim().length > 0);
-          if (lines.length < 2) throw new Error('Berkas CSV harus memiliki minimal baris judul dan 1 baris data');
+        if (!rawJson || rawJson.length === 0) {
+          setParseErrors(['File Excel/CSV tidak memiliki data baris atau kosong.']);
+          setIsProcessing(false);
+          return;
+        }
 
-          const delimiter = lines[0].includes(';') ? ';' : ',';
-          const parseCsvLine = (line: string): string[] => {
-            const result: string[] = [];
-            let cur = '';
-            let inQuotes = false;
-            for (let i = 0; i < line.length; i++) {
-              const char = line[i];
-              if (char === '"' || char === "'") {
-                if (inQuotes && line[i + 1] === char) {
-                  cur += char;
-                  i++;
-                } else {
-                  inQuotes = !inQuotes;
-                }
-              } else if (char === delimiter && !inQuotes) {
-                result.push(cur.trim());
-                cur = '';
-              } else {
-                cur += char;
-              }
-            }
-            result.push(cur.trim());
-            return result;
-          };
+        const validAthletes: Athlete[] = [];
+        const errors: string[] = [];
 
-          const rawHeaders = parseCsvLine(lines[0]).map((h) => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
-          const list: Athlete[] = [];
-          const errors: string[] = [];
+        rawJson.forEach((row, index) => {
+          const rowNumber = index + 2; // header is row 1
+          const name = (
+            row['Nama Lengkap'] ||
+            row['nama'] ||
+            row['name'] ||
+            row['Nama'] ||
+            ''
+          ).toString().trim();
 
-          for (let i = 1; i < lines.length; i++) {
-            const cols = parseCsvLine(lines[i]);
-            if (cols.length === 0 || cols.every((c) => !c)) continue;
-
-            // Extract based on column index or position
-            const memberNo = cols[0]?.replace(/'/g, '').trim() || `SM-BATU-${String(athletes.length + i).padStart(3, '0')}`;
-            const name = cols[1]?.trim() || cols[0]?.trim();
-
-            if (!name) {
-              errors.push(`Baris ${i + 1}: Nama atlet tidak ditemukan, dilewati.`);
-              continue;
-            }
-
-            const nickname = cols[2]?.trim() || name.split(' ')[0];
-            const genderRaw = cols[3]?.trim().toUpperCase();
-            const gender: Gender = genderRaw === 'P' || genderRaw === 'PEREMPUAN' || genderRaw === 'WANITA' ? 'P' : 'L';
-            const nik = cols[4]?.replace(/['"\s]/g, '').trim() || `357901${String(Date.now() + i).slice(-10)}`;
-            const birthPlace = cols[5]?.trim() || 'Kota Batu';
-            const birthDate = cols[6]?.trim() || '2010-01-01';
-            const ageCategoryRaw = cols[7]?.trim() || 'U-15';
-            const ageCategory: AgeCategory = (
-              ageCategoryRaw.includes('10') ? 'U-10' :
-              ageCategoryRaw.includes('12') ? 'U-12' :
-              ageCategoryRaw.includes('18') ? 'U-18' :
-              ageCategoryRaw.toLowerCase().includes('senior') ? 'Senior/Umum' : 'U-15'
-            );
-            const division: BowDivision = 'Horsebow';
-            const phone = cols[9]?.replace(/['"\s]/g, '').trim() || '';
-            const parentName = cols[10]?.trim() || '';
-            const parentPhone = cols[11]?.replace(/['"\s]/g, '').trim() || '';
-            const address = cols[12]?.trim() || 'Kota Batu, Jawa Timur';
-            const joinDate = cols[13]?.trim() || new Date().toISOString().slice(0, 10);
-            const activeStatus = cols[14]?.trim().toLowerCase();
-            const active = !(activeStatus === 'nonaktif' || activeStatus === 'tidak' || activeStatus === 'false');
-            const bowType = cols[15]?.trim() || 'Horsebow 48"';
-            const drawWeightLbs = parseInt(cols[16]?.trim() || '35', 10) || 35;
-            const drawLengthInch = parseInt(cols[17]?.trim() || '28', 10) || 28;
-            const arrowSpine = cols[18]?.trim() || '600';
-            const notes = cols[19]?.trim() || '';
-
-            const newAth: Athlete = {
-              id: `ath-imp-${Date.now()}-${i}`,
-              memberNo,
-              name,
-              nickname,
-              gender,
-              nik,
-              birthPlace,
-              birthDate,
-              ageCategory,
-              division,
-              phone,
-              parentName,
-              parentPhone,
-              address,
-              joinDate,
-              active,
-              photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-              userRole: 'atlit',
-              username: memberNo.toLowerCase().replace(/[^a-z0-9]/g, '') || `atlit_${i}`,
-              password: 'password123',
-              notes,
-              equipment: {
-                bowBrand: 'Ottoman Turkish Bow',
-                bowType,
-                drawWeightLbs,
-                drawLengthInch,
-                arrowBrand: 'Carbon Traditional Hybrid',
-                arrowSpine,
-                sightMarkNotes: '',
-                thumbRingType: 'Ottoman Brass Ring',
-                khatraStyle: 'Forward Khatra',
-                quiverType: 'Hip Quiver',
-              },
-            };
-
-            list.push(newAth);
+          if (!name) {
+            errors.push(`Baris ${rowNumber}: Nama Lengkap wajib diisi.`);
+            return;
           }
 
-          setParsedAthletes(list);
-          setParseErrors(errors);
-        }
+          const memberNo = (
+            row['No Anggota (KTA)'] ||
+            row['no_anggota'] ||
+            row['memberNo'] ||
+            row['KTA'] ||
+            `SM-BATU-${String(athletes.length + validAthletes.length + 1).padStart(3, '0')}`
+          ).toString().trim();
+
+          const genderRaw = (
+            row['Jenis Kelamin (L/P)'] ||
+            row['gender'] ||
+            row['Gender'] ||
+            'L'
+          ).toString().toUpperCase().trim();
+          const gender: Gender = genderRaw.startsWith('P') || genderRaw === 'FEMALE' ? 'P' : 'L';
+
+          const divisionRaw = (
+            row['Divisi Busur'] ||
+            row['division'] ||
+            row['Divisi'] ||
+            'Horsebow'
+          ).toString().trim();
+          const division: BowDivision = ['Horsebow', 'Standard Bow', 'Barebow', 'Recurve', 'Compound'].includes(divisionRaw)
+            ? (divisionRaw as BowDivision)
+            : 'Horsebow';
+
+          const ageCategoryRaw = (
+            row['Kategori Usia'] ||
+            row['ageCategory'] ||
+            'U-15'
+          ).toString().trim();
+          const ageCategory: AgeCategory = ['U-9', 'U-12', 'U-13', 'U-15', 'U-18', 'Umum', 'Senior'].includes(ageCategoryRaw)
+            ? (ageCategoryRaw as AgeCategory)
+            : 'U-15';
+
+          const memberLevelRaw = (
+            row['Level Anggota'] ||
+            row['memberLevel'] ||
+            'Atlet Reguler'
+          ).toString().trim();
+          const memberLevel: MemberLevel = [
+            'Pelatih Utama',
+            'Pelatih',
+            'Pengurus',
+            'Atlet Reguler',
+            'Atlet Prestasi',
+            'Calon Atlet',
+          ].includes(memberLevelRaw)
+            ? (memberLevelRaw as MemberLevel)
+            : 'Atlet Reguler';
+
+          const activeStr = (
+            row['Status Aktif (Aktif/Nonaktif)'] ||
+            row['active'] ||
+            'Aktif'
+          ).toString().toLowerCase();
+          const active = activeStr.includes('aktif') && !activeStr.includes('non');
+
+          const athlete: Athlete = {
+            id: `ath-imp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            memberNo,
+            name,
+            nickname: (row['Nama Panggilan'] || row['nickname'] || '').toString().trim(),
+            gender,
+            nik: row['NIK'] ? String(row['NIK']).replace(/[^0-9]/g, '') : undefined,
+            birthPlace: (row['Tempat Lahir'] || row['birthPlace'] || 'Kota Batu').toString().trim(),
+            birthDate: (row['Tanggal Lahir (YYYY-MM-DD)'] || row['birthDate'] || '2010-01-01').toString().trim(),
+            ageCategory,
+            division,
+            phone: row['No HP / WhatsApp'] ? String(row['No HP / WhatsApp']).trim() : undefined,
+            parentName: (row['Nama Orang Tua / Wali'] || row['parentName'] || '').toString().trim(),
+            parentPhone: row['No HP Orang Tua'] ? String(row['No HP Orang Tua']).trim() : undefined,
+            address: (row['Alamat Lengkap'] || row['address'] || 'Kota Batu').toString().trim(),
+            joinDate: (row['Tanggal Bergabung (YYYY-MM-DD)'] || row['joinDate'] || new Date().toISOString().slice(0, 10)).toString().trim(),
+            active,
+            memberLevel,
+            userRole:
+              memberLevel === 'Pelatih Utama'
+                ? 'pelatih_utama'
+                : memberLevel === 'Pelatih'
+                ? 'pelatih'
+                : memberLevel === 'Pengurus'
+                ? 'pengurus'
+                : 'atlit',
+            username: (row['Username Akun'] || row['username'] || '').toString().trim().toLowerCase() || undefined,
+            password: 'password123',
+            ktaStatus: 'APPROVED',
+            notes: (row['Catatan Tambahan'] || row['notes'] || '').toString().trim(),
+            equipment: {
+              bowType: (row['Model Busur'] || 'Horsebow 48"').toString().trim(),
+              drawWeightLbs: Number(row['Draw Weight (lbs)']) || 35,
+              drawLengthInch: Number(row['Draw Length (inch)']) || 28,
+              arrowBrand: (row['Merk Arrow'] || 'Easton').toString().trim(),
+              arrowSpine: (row['Spine Arrow'] || '600').toString().trim(),
+              thumbRingType: (row['Thumb Ring'] || 'Ottoman Brass Ring').toString().trim(),
+              khatraStyle: (row['Gaya Khatra'] || 'Forward Khatra').toString().trim(),
+              quiverType: (row['Tipe Quiver'] || 'Hip Quiver').toString().trim(),
+            },
+          };
+
+          validAthletes.push(athlete);
+        });
+
+        setParsedAthletes(validAthletes);
+        setParseErrors(errors);
+        setIsProcessing(false);
       } catch (err: any) {
-        console.error('Error parsing file:', err);
-        setParseErrors([`Gagal memproses berkas: ${err.message || 'Format tidak valid'}`]);
+        setParseErrors([`Gagal membaca file Excel/CSV: ${err.message || 'Format tidak valid'}`]);
+        setIsProcessing(false);
       }
     };
 
-    if (file.name.endsWith('.json') || file.name.endsWith('.csv') || file.type === 'text/csv' || file.type === 'text/plain') {
-      reader.readAsText(file);
-    } else {
-      setParseErrors(['Format berkas harus berekstensi .csv atau .json']);
-    }
+    reader.onerror = () => {
+      setParseErrors(['Gagal membaca file dari disk.']);
+      setIsProcessing(false);
+    };
+
+    reader.readAsArrayBuffer(file);
   };
 
-  const handleProcessImport = () => {
-    if (parsedAthletes.length === 0) return;
+  const parseJSONFile = (file: File) => {
     setIsProcessing(true);
-    try {
-      onBatchImportAthletes(parsedAthletes);
-      setSuccessMessage(`Berhasil mengimpor dan menyinkronkan ${parsedAthletes.length} data atlet ke database!`);
-      setTimeout(() => {
-        setParsedAthletes([]);
-        setImportFile(null);
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const parsed = JSON.parse(text);
+
+        if (!Array.isArray(parsed)) {
+          setParseErrors(['Format JSON harus berupa Array of Athletes [ { ... }, { ... } ]']);
+          setIsProcessing(false);
+          return;
+        }
+
+        const validAthletes: Athlete[] = parsed.map((item, idx) => ({
+          id: item.id || `ath-imp-${Date.now()}-${idx}`,
+          memberNo: item.memberNo || `SM-BATU-${String(athletes.length + idx + 1).padStart(3, '0')}`,
+          name: item.name || 'Atlet Tanpa Nama',
+          nickname: item.nickname || '',
+          gender: item.gender || 'L',
+          nik: item.nik || undefined,
+          birthPlace: item.birthPlace || 'Kota Batu',
+          birthDate: item.birthDate || '2010-01-01',
+          ageCategory: item.ageCategory || 'U-15',
+          division: item.division || 'Horsebow',
+          phone: item.phone || undefined,
+          parentName: item.parentName || undefined,
+          parentPhone: item.parentPhone || undefined,
+          address: item.address || 'Kota Batu',
+          joinDate: item.joinDate || new Date().toISOString().slice(0, 10),
+          active: item.active !== undefined ? item.active : true,
+          photoUrl: item.photoUrl,
+          memberLevel: item.memberLevel || 'Atlet Reguler',
+          userRole: item.userRole || 'atlit',
+          username: item.username || undefined,
+          password: item.password || 'password123',
+          ktaStatus: item.ktaStatus || 'APPROVED',
+          notes: item.notes || '',
+          equipment: item.equipment || {
+            bowType: 'Horsebow 48"',
+            drawWeightLbs: 35,
+            drawLengthInch: 28,
+            arrowBrand: 'Easton',
+            arrowSpine: 600,
+            thumbRingType: 'Ottoman Brass Ring',
+            khatraStyle: 'Forward Khatra',
+            quiverType: 'Hip Quiver',
+          },
+        }));
+
+        setParsedAthletes(validAthletes);
+        setParseErrors([]);
         setIsProcessing(false);
-      }, 1200);
-    } catch (err: any) {
-      setParseErrors([`Terjadi kesalahan saat menyimpan: ${err.message}`]);
-      setIsProcessing(false);
-    }
+      } catch (err: any) {
+        setParseErrors([`Gagal mem-parsing JSON: ${err.message}`]);
+        setIsProcessing(false);
+      }
+    };
+
+    reader.readAsText(file);
+  };
+
+  const handleConfirmImport = () => {
+    if (parsedAthletes.length === 0) return;
+    onBatchImportAthletes(parsedAthletes);
+    setSuccessMessage(`Berhasil mengimpor ${parsedAthletes.length} data atlet ke database!`);
+    setTimeout(() => {
+      onClose();
+    }, 1800);
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-fadeIn">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
-        {/* Modal Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+      <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col my-6 max-h-[90vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-800 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 shrink-0">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-pink-500 to-purple-600 flex items-center justify-center text-white shadow-md shadow-pink-500/20">
-              <ArrowUpDown className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-600 to-blue-600 flex items-center justify-center text-white font-bold shadow-lg shadow-pink-500/20">
+              <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
-                <span>Impor & Ekspor Data Atlet</span>
-                <span className="text-[10px] bg-pink-500/20 text-pink-300 border border-pink-500/40 px-2 py-0.5 rounded-full font-bold">
-                  {currentUser.role === 'super_admin' ? 'Super Admin' : 'Admin'}
-                </span>
-              </h3>
-              <p className="text-xs text-slate-400">
-                Pusat pertukaran data atlit format CSV, Microsoft Excel, dan JSON Cloud Backup
-              </p>
+              <h3 className="text-base font-black text-white">Impor & Ekspor Data Atlet (Excel / CSV)</h3>
+              <p className="text-xs text-slate-400">Kelola master data atlet Seneng Manah Archery Batu</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
+            className="p-2 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition border border-slate-700/60"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Tab Selector */}
-        <div className="grid grid-cols-2 p-2 bg-slate-950/70 border-b border-slate-800 gap-2">
+        <div className="flex items-center gap-2 px-6 py-3 bg-slate-950 border-b border-slate-800 shrink-0">
           <button
-            onClick={() => {
-              setActiveTab('export');
-              setSuccessMessage(null);
-            }}
-            className={`py-2.5 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 ${
+            onClick={() => setActiveTab('export')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
               activeTab === 'export'
                 ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
             <Download className="w-4 h-4" />
-            <span>Ekspor Data ({athletes.length} Atlet)</span>
+            <span>Ekspor ke Excel / CSV ({athletes.length} Atlet)</span>
           </button>
 
           <button
-            onClick={() => {
-              setActiveTab('import');
-              setSuccessMessage(null);
-            }}
-            className={`py-2.5 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 ${
+            onClick={() => setActiveTab('import')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
               activeTab === 'import'
-                ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                ? 'bg-gradient-to-r from-blue-600 to-teal-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
             <Upload className="w-4 h-4" />
-            <span>Impor Data Atlet (CSV / JSON)</span>
+            <span>Impor dari Excel / CSV</span>
           </button>
         </div>
 
-        {/* Tab Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6">
-          {/* ======================= EXPORT TAB ======================= */}
-          {activeTab === 'export' && (
-            <div className="space-y-6">
-              <div className="p-4 bg-slate-950/80 rounded-2xl border border-slate-800 flex items-start gap-3">
-                <Info className="w-5 h-5 text-pink-400 shrink-0 mt-0.5" />
-                <div className="text-xs text-slate-300 space-y-1">
-                  <p className="font-bold text-white">Ringkasan Data Atlet Tersedia:</p>
-                  <p>
-                    Saat ini tersimpan <strong>{athletes.length} orang atlet</strong> aktif di klub Seneng Manah.
-                    Berkas ekspor berisi identitas lengkap, NIK, nomor KTA, tanggal lahir, kontak orang tua, spesifikasi
-                    busur, berat tarikan (draw weight), arrow spine, hingga catatan pelatih.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* 1. Export CSV */}
-                <div className="p-5 bg-slate-950 rounded-2xl border border-slate-800 hover:border-pink-500/40 transition flex flex-col justify-between space-y-4">
-                  <div className="space-y-2">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-950 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold">
-                      <FileSpreadsheet className="w-5 h-5" />
-                    </div>
-                    <h4 className="text-sm font-bold text-white">Unduh CSV / Microsoft Excel</h4>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      Format standar tabel (UTF-8 BOM) yang dapat langsung dibuka dan diedit di Microsoft Excel, Google
-                      Sheets, LibreOffice, atau WPS Office tanpa karakter rusak.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={handleExportCSV}
-                    className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition shadow-md shadow-emerald-600/20 active:scale-95"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Unduh Berkas (.CSV)</span>
-                  </button>
-                </div>
-
-                {/* 2. Export JSON */}
-                <div className="p-5 bg-slate-950 rounded-2xl border border-slate-800 hover:border-purple-500/40 transition flex flex-col justify-between space-y-4">
-                  <div className="space-y-2">
-                    <div className="w-10 h-10 rounded-xl bg-purple-950 border border-purple-500/40 flex items-center justify-center text-purple-400 font-bold">
-                      <FileCode className="w-5 h-5" />
-                    </div>
-                    <h4 className="text-sm font-bold text-white">Unduh Cadangan JSON Struktural</h4>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      Format objek lengkap termasuk konfigurasi peralatan memanah lengkap (bow model, thumb ring, khatra)
-                      yang siap dipulihkan kembali ke sistem.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={handleExportJSON}
-                    className="w-full py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition shadow-md shadow-purple-600/20 active:scale-95"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Unduh Berkas (.JSON)</span>
-                  </button>
-                </div>
-              </div>
+        {/* Modal Body */}
+        <div className="p-6 space-y-6 overflow-y-auto flex-1 text-xs">
+          {successMessage && (
+            <div className="p-4 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-2xl flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              <span className="font-bold">{successMessage}</span>
             </div>
           )}
 
-          {/* ======================= IMPORT TAB ======================= */}
-          {activeTab === 'import' && (
-            <div className="space-y-6">
-              {/* Instructions & Template Download */}
-              <div className="p-4 bg-slate-950/80 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <Info className="w-5 h-5 text-sky-400 shrink-0 mt-0.5" />
-                  <div className="text-xs text-slate-300">
-                    <p className="font-bold text-white">Panduan Impor Data:</p>
-                    <p className="text-slate-400">
-                      Gunakan template resmi Seneng Manah agar kolom terbaca dengan tepat dan otomatis sinkron ke Firebase.
-                    </p>
-                  </div>
+          {/* ==================================================== */}
+          {/* TAB 1: EXPORT SECTION */}
+          {/* ==================================================== */}
+          {activeTab === 'export' && (
+            <div className="space-y-5">
+              <div className="p-4 rounded-2xl bg-slate-950/80 border border-pink-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h4 className="font-extrabold text-white text-sm flex items-center gap-2">
+                    <Users className="w-4 h-4 text-pink-400" />
+                    <span>Total Atlet Terdaftar: {athletes.length} Orang</span>
+                  </h4>
+                  <p className="text-slate-400 text-[11px]">
+                    Ekspor seluruh data biodata, divisi busur, nomor KTA, dan spesifikasi peralatan ke file Excel atau format lain.
+                  </p>
                 </div>
 
                 <button
                   onClick={handleDownloadTemplate}
-                  className="px-4 py-2 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 border border-sky-500/30 text-xs font-bold flex items-center gap-2 shrink-0 transition"
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-bold border border-slate-700 transition flex items-center gap-1.5 shrink-0"
                 >
-                  <Download className="w-4 h-4" />
-                  <span>Unduh Template CSV Contoh</span>
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                  <span>Download Format Template Excel</span>
                 </button>
               </div>
 
-              {/* Upload Dropzone */}
-              <div className="p-6 bg-slate-950 rounded-2xl border-2 border-dashed border-slate-700 hover:border-pink-500/60 transition text-center space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                {/* Excel Button */}
+                <button
+                  onClick={handleExportExcel}
+                  className="p-5 rounded-2xl bg-gradient-to-br from-emerald-950/40 to-slate-900 border border-emerald-500/30 hover:border-emerald-500/60 transition group text-left space-y-3"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold group-hover:scale-105 transition">
+                    <FileSpreadsheet className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h5 className="font-extrabold text-white text-sm">Microsoft Excel (.xlsx)</h5>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Format spreadsheet modern lengkap dengan kolom terformat & otomatis lebar.
+                    </p>
+                  </div>
+                  <div className="pt-2 text-emerald-400 font-bold flex items-center gap-1">
+                    <span>Download .XLSX</span>
+                    <Download className="w-3.5 h-3.5" />
+                  </div>
+                </button>
+
+                {/* CSV Button */}
+                <button
+                  onClick={handleExportCSV}
+                  className="p-5 rounded-2xl bg-gradient-to-br from-blue-950/40 to-slate-900 border border-blue-500/30 hover:border-blue-500/60 transition group text-left space-y-3"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold group-hover:scale-105 transition">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h5 className="font-extrabold text-white text-sm">File CSV (.csv)</h5>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Format teks universal terpisah koma dengan encoding UTF-8 standar.
+                    </p>
+                  </div>
+                  <div className="pt-2 text-blue-400 font-bold flex items-center gap-1">
+                    <span>Download .CSV</span>
+                    <Download className="w-3.5 h-3.5" />
+                  </div>
+                </button>
+
+                {/* JSON Button */}
+                <button
+                  onClick={handleExportJSON}
+                  className="p-5 rounded-2xl bg-gradient-to-br from-purple-950/40 to-slate-900 border border-purple-500/30 hover:border-purple-500/60 transition group text-left space-y-3"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center font-bold group-hover:scale-105 transition">
+                    <FileCode className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h5 className="font-extrabold text-white text-sm">Backup JSON (.json)</h5>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Struktur raw objek data lengkap untuk backup dan migrasi antar database.
+                    </p>
+                  </div>
+                  <div className="pt-2 text-purple-400 font-bold flex items-center gap-1">
+                    <span>Download .JSON</span>
+                    <Download className="w-3.5 h-3.5" />
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ==================================================== */}
+          {/* TAB 2: IMPORT SECTION */}
+          {/* ==================================================== */}
+          {activeTab === 'import' && (
+            <div className="space-y-5">
+              {/* Dropzone / Upload Area */}
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-slate-700 hover:border-pink-500/60 rounded-3xl p-8 text-center bg-slate-950/50 hover:bg-slate-950/80 transition cursor-pointer space-y-3"
+              >
+                <div className="w-14 h-14 rounded-2xl bg-pink-500/10 border border-pink-500/30 text-pink-400 flex items-center justify-center mx-auto shadow-inner">
+                  <Upload className="w-7 h-7" />
+                </div>
+                <div>
+                  <p className="font-bold text-sm text-white">
+                    Klik atau Seret & Letakkan file Excel (.xlsx / .xls) atau .CSV di sini
+                  </p>
+                  <p className="text-slate-400 text-[11px] mt-1">
+                    Sistem akan memvalidasi kolom secara otomatis dan menampilkan pratinjau sebelum disimpan.
+                  </p>
+                </div>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv,.json,text/csv,application/json"
+                  accept=".xlsx, .xls, .csv, .json"
                   onChange={handleFileChange}
                   className="hidden"
                 />
-
-                <div className="w-12 h-12 rounded-2xl bg-pink-500/10 border border-pink-500/30 text-pink-400 flex items-center justify-center mx-auto">
-                  <Upload className="w-6 h-6" />
-                </div>
-
-                <div>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white font-bold text-xs shadow-md transition"
-                  >
-                    Pilih File CSV atau JSON
-                  </button>
-                  <p className="text-[11px] text-slate-400 mt-2">
-                    {importFile ? (
-                      <span className="text-emerald-400 font-bold">Berkas terpilih: {importFile.name} ({(importFile.size / 1024).toFixed(1)} KB)</span>
-                    ) : (
-                      'Klik tombol di atas untuk memilih berkas dari komputer/HP Anda'
-                    )}
-                  </p>
-                </div>
               </div>
 
-              {/* Error messages */}
               {parseErrors.length > 0 && (
-                <div className="p-4 bg-rose-950/60 border border-rose-500/40 rounded-2xl text-rose-300 text-xs space-y-1">
-                  <div className="flex items-center gap-2 font-bold text-rose-400">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>Catatan Kesalahan:</span>
+                <div className="p-4 bg-rose-500/15 border border-rose-500/30 rounded-2xl text-rose-300 space-y-1.5">
+                  <div className="flex items-center gap-2 font-bold text-xs">
+                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                    <span>Terdapat {parseErrors.length} Catatan Kesalahan:</span>
                   </div>
-                  <ul className="list-disc list-inside space-y-0.5 text-[11px]">
-                    {parseErrors.map((err, i) => (
+                  <ul className="list-disc list-inside space-y-1 text-[11px]">
+                    {parseErrors.slice(0, 5).map((err, i) => (
                       <li key={i}>{err}</li>
                     ))}
+                    {parseErrors.length > 5 && (
+                      <li>...dan {parseErrors.length - 5} kesalahan lainnya.</li>
+                    )}
                   </ul>
                 </div>
               )}
 
-              {/* Success Message */}
-              {successMessage && (
-                <div className="p-4 bg-emerald-950/60 border border-emerald-500/40 rounded-2xl text-emerald-300 text-xs font-bold flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                  <span>{successMessage}</span>
-                </div>
-              )}
-
-              {/* Parsed Athletes Preview Table */}
+              {/* Preview Table of Parsed Athletes */}
               {parsedAthletes.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-slate-200 flex items-center gap-2">
-                      <Check className="w-4 h-4 text-emerald-400" />
-                      <span>Hasil Analisis Berkas: {parsedAthletes.length} Atlet Siap Diimpor</span>
+                    <h4 className="font-extrabold text-white text-xs flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <span>Siap Diimpor: {parsedAthletes.length} Atlet</span>
                     </h4>
-                    <span className="text-[11px] text-slate-400">
-                      Periksa pratinjau sebelum menyimpan
-                    </span>
+                    <span className="text-[11px] text-slate-400">Pratinjau Data:</span>
                   </div>
 
-                  <div className="overflow-x-auto rounded-xl border border-slate-800 max-h-56 bg-slate-950">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-900 text-slate-400 sticky top-0">
+                  <div className="max-h-60 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-950">
+                    <table className="w-full text-left text-[11px]">
+                      <thead className="bg-slate-900 text-slate-400 border-b border-slate-800 sticky top-0 font-bold">
                         <tr>
                           <th className="p-2.5">No KTA</th>
                           <th className="p-2.5">Nama Lengkap</th>
-                          <th className="p-2.5">L/P</th>
-                          <th className="p-2.5">Kategori Usia</th>
-                          <th className="p-2.5">WhatsApp</th>
-                          <th className="p-2.5">Model Busur</th>
-                          <th className="p-2.5">Draw Weight</th>
+                          <th className="p-2.5">Level</th>
+                          <th className="p-2.5">Divisi</th>
+                          <th className="p-2.5">Kategori</th>
+                          <th className="p-2.5">No WhatsApp</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800 text-slate-200">
-                        {parsedAthletes.map((a, idx) => (
-                          <tr key={idx} className="hover:bg-slate-900/60">
-                            <td className="p-2.5 font-mono text-pink-400 font-bold">{a.memberNo}</td>
+                      <tbody className="divide-y divide-slate-900 text-slate-300 font-medium">
+                        {parsedAthletes.map((a, i) => (
+                          <tr key={i} className="hover:bg-slate-900/40">
+                            <td className="p-2.5 font-mono text-pink-400">{a.memberNo}</td>
                             <td className="p-2.5 font-bold text-white">{a.name}</td>
-                            <td className="p-2.5">{a.gender}</td>
-                            <td className="p-2.5">{a.ageCategory}</td>
-                            <td className="p-2.5 font-mono">{a.phone || '-'}</td>
-                            <td className="p-2.5 text-slate-400">{a.equipment?.bowType || 'Horsebow'}</td>
-                            <td className="p-2.5">{a.equipment?.drawWeightLbs || 35} lbs</td>
+                            <td className="p-2.5">
+                              <span className="px-2 py-0.5 rounded-full text-[9px] bg-purple-500/20 text-purple-300 font-bold">
+                                {a.memberLevel || 'Atlet Reguler'}
+                              </span>
+                            </td>
+                            <td className="p-2.5">{a.division}</td>
+                            <td className="p-2.5">{a.ageCategory} ({a.gender})</td>
+                            <td className="p-2.5 font-mono text-slate-400">{a.phone || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
 
-                  <div className="pt-2 flex justify-end">
+                  <div className="flex items-center justify-end gap-3 pt-2">
                     <button
-                      onClick={handleProcessImport}
-                      disabled={isProcessing}
-                      className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-600 hover:opacity-90 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-pink-500/20 flex items-center gap-2 transition disabled:opacity-50"
+                      onClick={() => {
+                        setParsedAthletes([]);
+                        setImportFile(null);
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold text-xs"
                     >
-                      {isProcessing ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          <span>Menyimpan ke Cloud...</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>Proses Impor ({parsedAthletes.length} Atlet)</span>
-                        </>
-                      )}
+                      Batal
+                    </button>
+
+                    <button
+                      onClick={handleConfirmImport}
+                      className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-600 hover:opacity-95 text-white font-extrabold text-xs shadow-lg shadow-emerald-600/30 transition active:scale-95 flex items-center gap-2"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span>Simpan & Impor {parsedAthletes.length} Atlet Sekarang</span>
                     </button>
                   </div>
                 </div>
               )}
             </div>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400">
-          <span>Kompatibel dengan Microsoft Excel 2013-2026, Google Sheets, dan Cloud Firestore.</span>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold transition"
-          >
-            Tutup
-          </button>
         </div>
       </div>
     </div>

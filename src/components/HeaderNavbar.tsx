@@ -65,6 +65,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
     pelatih_utama: { label: 'PELATIH UTAMA', color: 'bg-purple-500/20 text-purple-300 border-purple-500/40' },
     pelatih: { label: 'PELATIH', color: 'bg-blue-500/20 text-blue-300 border-blue-500/40' },
     pelatih_atlit: { label: 'PELATIH & ATLET', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' },
+    pengurus: { label: 'PENGURUS', color: 'bg-teal-500/20 text-teal-300 border-teal-500/40' },
     atlit: { label: 'ATLET', color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' },
   };
 

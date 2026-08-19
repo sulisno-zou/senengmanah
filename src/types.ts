@@ -30,7 +30,8 @@ export type PaymentMethod =
   | 'Tunai'
   | 'Tunai / Cash'
   | 'Beasiswa Prestasi';
-export type UserRole = 'super_admin' | 'admin' | 'pelatih' | 'pelatih_atlit' | 'atlit' | 'pelatih_utama';
+export type UserRole = 'super_admin' | 'admin' | 'pelatih_utama' | 'pelatih' | 'pelatih_atlit' | 'pengurus' | 'atlit';
+export type MemberLevel = 'Pelatih Utama' | 'Pelatih' | 'Pengurus' | 'Atlet Reguler' | 'Atlet Prestasi' | 'Calon Atlet';
 
 export interface ArrowHit {
   id?: string;
@@ -96,6 +97,7 @@ export interface Athlete {
   joinDate: string;
   active: boolean;
   photoUrl?: string;
+  memberLevel?: MemberLevel;
   equipment?: BowEquipment;
   monthlySppCustomFee?: number;
   userRole?: UserRole;
@@ -361,10 +363,17 @@ export interface KTACardSettings {
   borderColor: string; // e.g. '#ec4899' (warna border kartu)
   showWatermark: boolean; // tampilkan watermark target panahan
   watermarkOpacity: number; // 0.05 - 0.4
-  footerText: string; // "Kartu ini sah sebagai bukti keanggotaan atlet panahan Seneng Manah Batu"
+  footerText: string; // "Kartu Tanda Anggota Resmi • Club Seneng Manah Batu"
   cardTitle: string; // "KARTU TANDA ANGGOTA RESMI"
+  disclaimerText?: string; // "Anggota Resmi Seneng Manah, Segala penyalahgunaan KTA adalah tanggung jawab pemegang."
   photoBorderColor: string; // e.g. '#f43f5e'
   barcodeBorderColor: string; // e.g. '#38bdf8'
+  backSubtitle?: string; // e.g. "KETENTUAN KARTU TANDA ANGGOTA"
+  backCoachName?: string; // e.g. "Coach Zoulkifli"
+  backCoachTitle?: string; // e.g. "Pelatih Kepala / Penanggung Jawab"
+  backContactText?: string; // e.g. "0812-3344-5566"
+  backLocationText?: string; // e.g. "Kota Batu, Jawa Timur"
+  regulations?: string[]; // list of rules on the back card
 }
 
 export interface ClubSettings {
@@ -373,6 +382,11 @@ export interface ClubSettings {
   coachName?: string;
   coachContact?: string;
   headCoach?: string;
+  headCoachName?: string;
+  headCoachTitle?: string;
+  headCoachContact?: string;
+  ktaResponsiblePerson?: string; // Default: Pelatih Utama
+  ktaResponsibleTitle?: string; // Default: "Pelatih Utama & Penanggung Jawab Teknis"
   phone?: string;
   email?: string;
   address?: string;
@@ -390,6 +404,20 @@ export interface ClubSettings {
   superAdminUsername: string;
   superAdminPassword?: string;
   ktaSettings?: KTACardSettings;
+}
+
+export interface ProfileUpdateRequest {
+  id: string;
+  athleteId: string;
+  athleteName: string;
+  currentUsername: string;
+  newUsername?: string;
+  newPassword?: string;
+  status: 'MENUNGGU_VERIFIKASI' | 'DISETUJUI' | 'DITOLAK';
+  requestedAt: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  rejectionReason?: string;
 }
 
 export interface AICoachAnalysis {

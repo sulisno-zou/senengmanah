@@ -262,6 +262,17 @@ export const ScanKTAModal: React.FC<ScanKTAModalProps> = ({
                       </span>
                     </div>
 
+                    {/* Official Statement Mandate */}
+                    <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-xs text-emerald-200 flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold text-emerald-300 text-[11px]">Pernyataan Resmi Keanggotaan:</p>
+                        <p className="text-white font-bold text-xs mt-0.5">
+                          &quot;Anggota Resmi Seneng Manah, Segala penyalahgunaan KTA adalah tanggung jawab pemegang.&quot;
+                        </p>
+                      </div>
+                    </div>
+
                     {/* Identity Presentation */}
                     <div className="flex items-start space-x-4">
                       <img
